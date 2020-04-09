@@ -25,6 +25,38 @@ void Convolve(const float *image, float *output, size_t n, const float *mask, si
   }
 }
 
+void convolve1D_horiz(const float *image, float *output, size_t n, const float *mask, size_t m) {
+  #pragma omp for simd collapse(2)
+  for (size_t x = 0; x < n; x++) {
+    for (size_t y = 1; y < n-1; y++) {
+      output[x*n+y] = mask[0] * image[x*n + (y-(m-1)/2)] + 
+                      mask[1] * image[x*n + (y+1-(m-1)/2)] + 
+                      mask[2] * image[x*n + (y+2-(m-1)/2)];
+    }
+  }
+  #pragma omp for simd
+  for (size_t x = 0; x < n; x++) {
+    output[x*n] = mask[1] * image[x*n+(y+1-(m-1)/2)] + mask[2] * image[x*n + (y+2-(m-1)/2)];
+    output[x*n+n-1] = mask[0] * image[x*n + (y-(m-1)/2)] + mask[1] * image[x*n + (y+1-(m-1)/2)];
+  }
+}
+
+void convolve1D_vert(const float *image, float *output, size_t n, const float *mask, size_t m) {
+  #pragma omp for simd collapse(2)
+  for (size_t x = 1; x < n-1; x++) {
+    for (size_t y = 0; y < n; y++) {
+      output[x*n+y] = mask[0] * image[(x-(m-1)/2)*n + y] + 
+                      mask[1] * image[(x+1-(m-1)/2)*n + y] + 
+                      mask[2] * image[(x+2-(m-1)/2)*n + y];
+    }
+  }
+  #pragma omp for simd
+  for (size_t y = 0; y < n; x++) {
+    output[y] = mask[1] * image[y] + mask[2] * image[n + y];
+    output[(n-1)*n+y] = mask[0] * image[(n-2)*n + y] + mask[1] * image[(n-1)*n +y];
+  }
+}
+
 int main(int argc, char* argv[]) {
   
   size_t n = atoi(argv[1]);
