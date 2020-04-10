@@ -90,16 +90,33 @@ void threshold(float* supp[], size_t n, float low, float high) {
 }
 
 // pixels between low and high thresholds
-// void hysteresis(float *supp[], size_t n) {
-// 	#pragma omp for collapse(2)
-// 	for (int i = 0; i < n; i++) {
-// 		for (int j = 0; j < n; j++) {
-// 			bool hasHighNei, hasMidNei;
-// 			for (size_t r = i-1; r <= i+1; r++) {
-// 				for (size_t c = j-1; c <= j+1; c++) {
-					
-// 				}
-// 			}
-// 		}
-// 	}
-// }
+void hysteresis(float *supp[], size_t n, float low, float high) {
+	#pragma omp for collapse(2)
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++) {
+			if (supp[r][c] >= low && supp[r][c] <= high) {
+				bool hasHighNei = false, hasMidNei = false;
+				for (size_t r = i-1; r <= i+1; r++) {
+					for (size_t c = j-1; c <= j+1; c++) {
+						if (r < 0 || c < 0 || r >= n || c >= n)
+							continue;
+						else {
+							if (supp[r][c] > high) {
+								hasHighNei = true;
+								supp[i][j] = 255.0;
+								break;
+							}
+							else if (supp[r][c] > low && supp[r][c] < high)
+								hashMidNei = true;
+						}
+					}
+					if (hasHighNei)
+						break;
+				}
+
+			}
+			// due to this pixel now being classified as edge, other previous pixels need to be reconsidered
+			// so hasMidNei
+		}
+	}
+}
