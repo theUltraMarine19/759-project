@@ -5,7 +5,7 @@ using namespace std;
 
 class FCM {
     public:
-        FCM(double epsilon, int data_points, int n, int num_clusters, int m);
+        FCM(double epsilon, int data_points, int n, int dims, int num_clusters, int m);
         ~FCM();
         void init_membership();
         void init_image(double **data);
@@ -14,7 +14,7 @@ class FCM {
         double calculate_membership_point(int i, int j);
         double calculate_new_old_u_dist();
         double update_membership();
-        double eucl_distance(int a, int b);
+        double eucl_distance(int i, int k);
 
     private:
         double **i_image;
@@ -26,6 +26,7 @@ class FCM {
         int i_data_points;
         int i_image_size;
         int i_m;
+        int i_dims;
 
 };
 

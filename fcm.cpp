@@ -1,12 +1,15 @@
+#include <iostream>
+#include <float.h>
+#include <math.h>
+#include <random>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <iostream>
-#include <math.h>
-#include <float.h>
 #include "fcm.h"
 
-FCM::FCM(double epsilon, int data_points, int n, int num_clusters, int m) {
+using namespace std;
+
+FCM::FCM(double epsilon, int data_points, int n, int dims, int num_clusters, int m) {
     i_terminate_epsilon = epsilon;
     i_membership = nullptr;
     i_cluster_centers = nullptr;
@@ -15,11 +18,12 @@ FCM::FCM(double epsilon, int data_points, int n, int num_clusters, int m) {
     i_data_points = data_points;
     i_m = m;
     i_image_size = n;
+    i_dims = dims;
 }
 
 FCM::~FCM() {
     if (i_image != nullptr) {
-        delete i_image;
+        delete[] i_image;
     }
 
     if (i_cluster_centers != nullptr) {
@@ -27,7 +31,11 @@ FCM::~FCM() {
     }
 
     if (i_membership != nullptr) {
-        delete i_membership;
+        delete[] i_membership;
+    }
+
+    if (new_membership != nullptr) {
+        delete[] new_membership;
     }
 }
 
@@ -62,9 +70,16 @@ void FCM::init_centers() {
     }
 }
 
-double FCM::eucl_distance(int a, int b) {
-    // calculate distance to the centers
-
+double FCM::eucl_distance(int i, int k) {
+    // i: data point
+    // k: cluster center point
+    double sqrt_sum = 0.0;
+    // calculate the euclidean distance to the centers
+    for (int j = 0; j < i_dims; ++j) {
+        sqrt_sum += pow(i_image[k][j] - i_cluster_centers[i], 2);
+    }
+    
+    return sqrt(sqrt_sum);
 }
 
 double FCM:: calculate_membership_point(int i, int j) {
