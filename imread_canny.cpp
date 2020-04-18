@@ -53,9 +53,9 @@ int main( int argc, char** argv )
 
     // Do a convolution of image with the Gaussian filter
     Convolve(img, smooth_img, image.rows, image.cols, filter, 3);
-    Mat smoothed = Mat(image.rows, image.cols, CV_32F, smooth_img);
-    imshow( "Display window", smoothed);
-    waitKey(0);
+    // Mat smoothed = Mat(image.rows, image.cols, CV_32F, smooth_img);
+    // imshow( "Display window", smoothed);
+    // waitKey(0);
     
 
     float maskx1[3] = {1, 0, -1};
@@ -87,7 +87,11 @@ int main( int argc, char** argv )
     // }
 
     mag_grad(outputx, outputy, output, grad, image.rows, image.cols);
+    // Mat gradient = Mat(image.rows, image.cols, CV_32F, output);
+    // imshow( "Display window", gradient);
+    // waitKey(0);
 
+    memcpy(supp, output, image.rows * image.cols * sizeof(float));
     NonMaxSuppresion(grad, output, supp, image.rows, image.cols);
 
     Mat out = Mat(image.rows, image.cols, CV_32F, supp);
@@ -96,12 +100,12 @@ int main( int argc, char** argv )
 
     // for (int i = 0; i < out.rows; i++) {
     //     for (int j = 0; j < out.cols; j++) {
-    //         cout << outputx[i*out.cols+j] << " ";
+    //         cout << grad[i*out.cols+j] << " ";
     //     }
     //     cout << endl;
     // }    
 
-    // imshow( "Display window", norm_out);
-    // waitKey(0);
+    imshow( "Display window", out);
+    waitKey(0);
     return 0;
 }

@@ -34,7 +34,7 @@ void mag_grad(float *Gx, float *Gy, float *magn, float *grad, size_t r, size_t c
 			if (Gx[i*c+j] == 0)
 				grad[i*c+j] = 90;
 			else
-				grad[i*c+j] = atan2(Gy[i*c+j], Gx[i*c+j]);
+				grad[i*c+j] = atan2(Gy[i*c+j], Gx[i*c+j]) * 180.0/M_PI;
 		}
 	}
 }
@@ -45,6 +45,7 @@ void NonMaxSuppresion(float *grad, float* magn, float* supp, size_t r, size_t c)
 	for (int i = 1; i < r-1; i++) {
 		for (int j = 1; j < c-1; j++) {
 			float angle = grad[i*c+j];
+
 			if ((-22.5 <= angle && angle <= 22.5) || (157.5 <= angle && angle <= -157.5))
 				if (magn[i*c+j] < magn[i*c+j+1] || magn[i*c+j] < magn[i*c+j-1])
 					supp[i*c+j] = 0.0;
