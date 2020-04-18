@@ -14,13 +14,14 @@ void Convolve(const float *image, float *output, size_t r, size_t c, const float
   // merge nested loops into 1 (no data dependencies)
   for (size_t x = 0; x < r; x++) {
     for (size_t y = 0; y < c; y++) {
-      output[x * r + y] = 0;
+      output[x * c + y] = 0;
       // #pragma omp simd
       for (size_t i = 0; i < m; i++) {
         for (size_t j = 0; j < m; j++) {
           if ((x + i - (m - 1) / 2) < r && (y + j - (m - 1) / 2) < c) {
           	// cout << x << " " << y << " " << i << " " << j << endl;
           	output[x * c + y] += mask[i * m + j] * image[(x + i - (m - 1) / 2) * c + (y + j - (m - 1) / 2)];
+          	// cout << output[x*c+y] << endl;
           }
         }
       }
@@ -32,15 +33,15 @@ void convolve1D_horiz(const float *image, float *output, size_t r, size_t c, con
   #pragma omp for simd collapse(2)
   for (size_t x = 0; x < r; x++) {
     for (size_t y = 1; y < c-1; y++) {
-      output[x*r+y] = mask[0] * image[x*r + (y-(m-1)/2)] + 
-                      mask[1] * image[x*r + (y+1-(m-1)/2)] + 
-                      mask[2] * image[x*r + (y+2-(m-1)/2)];
+      output[x*c+y] = mask[0] * image[x*c + (y-(m-1)/2)] + 
+                      mask[1] * image[x*c + (y+1-(m-1)/2)] + 
+                      mask[2] * image[x*c + (y+2-(m-1)/2)];
     }
   }
   #pragma omp for simd
   for (size_t x = 0; x < r; x++) {
-    output[x*r] = mask[1] * image[x*r] + mask[2] * image[x*r + 1];
-    output[x*r+r-1] = mask[0] * image[x*r + r-2] + mask[1] * image[x*r + r-1];
+    output[x*c] = mask[1] * image[x*c] + mask[2] * image[x*c + 1];
+    output[x*c+c-1] = mask[0] * image[x*c + c-2] + mask[1] * image[x*c + c-1];
   }
 }
 
@@ -48,15 +49,15 @@ void convolve1D_vert(const float *image, float *output, size_t r, size_t c, cons
   #pragma omp for simd collapse(2)
   for (size_t x = 1; x < r-1; x++) {
     for (size_t y = 0; y < c; y++) {
-      output[x*r+y] = mask[0] * image[(x-(m-1)/2)*r + y] + 
-                      mask[1] * image[(x+1-(m-1)/2)*r + y] + 
-                      mask[2] * image[(x+2-(m-1)/2)*r + y];
+      output[x*c+y] = mask[0] * image[(x-(m-1)/2)*c + y] + 
+                      mask[1] * image[(x+1-(m-1)/2)*c + y] + 
+                      mask[2] * image[(x+2-(m-1)/2)*c + y];
     }
   }
   #pragma omp for simd
-  for (size_t y = 0; y < r; y++) {
-    output[y] = mask[1] * image[y] + mask[2] * image[r + y];
-    output[(r-1)*r+y] = mask[0] * image[(r-2)*r + y] + mask[1] * image[(r-1)*r +y];
+  for (size_t y = 0; y < c; y++) {
+    output[y] = mask[1] * image[y] + mask[2] * image[c + y];
+    output[(r-1)*c+y] = mask[0] * image[(r-2)*c + y] + mask[1] * image[(r-1)*c +y];
   }
 }
 
