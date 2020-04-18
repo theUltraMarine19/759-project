@@ -49,6 +49,7 @@ void convolve1D_vert(const float *image, float *output, size_t r, size_t c, cons
   #pragma omp for simd collapse(2)
   for (size_t x = 1; x < r-1; x++) {
     for (size_t y = 0; y < c; y++) {
+      // This hurts spatial locality
       output[x*c+y] = mask[0] * image[(x-(m-1)/2)*c + y] + 
                       mask[1] * image[(x+1-(m-1)/2)*c + y] + 
                       mask[2] * image[(x+2-(m-1)/2)*c + y];
