@@ -19,6 +19,7 @@ FCM::FCM(float** img, float epsilon, int rows, int cols, int num_clusters, int m
     i_rows = rows;
     i_cols = cols;
     i_m = m;
+    done = false;
 }
 
 FCM::~FCM() {
@@ -34,21 +35,33 @@ FCM::~FCM() {
         delete[] i_membership;
     }
 
-    if (new_membership != nullptr) {
-        delete[] new_membership;
+    if (i_new_membership != nullptr) {
+        delete[] i_new_membership;
     }
 }
 
 
 void FCM::init_membership() {
-    i_membership = new float* [i_rows];
+    i_membership = new float** [i_rows];
+    i_new_membership = new float** [i_rows];
 
     for (int i = 0; i < i_rows; ++i) {
-        i_membership[i] = new float[i_cols];
+        i_membership[i] = new float* [i_cols];
+        i_new_membership[i] = new float* [i_cols];
+        for (int j = 0; j < i_cols; ++j) {
+            i_membership[i][j] = new float[i_num_clutsers];
+            i_new_membership[i][j] = new float[i_num_clutsers];
+        }
+        
     }
 
     for (int i = 0; i < i_rows; ++i) {
-        memset(i_membership[i], 1 / i_num_clutsers, sizeof(i_membership[i]));
+        for (int j = 0; j < i_cols; ++i) {
+            for (int k = 0; k < i_num_clutsers; ++k) {
+                i_membership[i][j][k] = 1 / i_num_clutsers;
+                i_new_membership[i][j][k] = 99999;
+            } 
+        }
     }
 
 }
@@ -68,7 +81,7 @@ void FCM::init_centers() {
     }
 }
 
-double FCM::eucl_distance(int i, int val) {
+float FCM::eucl_distance(int i, int val) {
     // val: data point value
     // i: cluster center point
     return sqrt(pow(val - i_cluster_centers[i], 2));
@@ -81,16 +94,18 @@ void FCM::update_centers() {
         u_ij_m = 0.0, x_u_ij_m = 0.0;
         for (int i = 0; i < i_rows; ++i) {
             for (int j = 0; j < i_cols; ++j) {
-                u_ij_m += pow(i_membership[i][j], i_m);
-                x_u_ij_m += i_image[i][j] * pow(i_membership[i][j], i_m);
+                u_ij_m += pow(i_membership[i][j][k], i_m);
+                x_u_ij_m += i_image[i][j] * pow(i_membership[i][j][k], i_m);
             }
         }
         i_cluster_centers[k] = x_u_ij_m / u_ij_m;
+
     }
+
 }
 
-double FCM::update_membership() {
-    double diff = 0.0;
+float FCM::update_membership() {
+    float diff = 0.0;
 
     // check if this is the first iteration
     if (i_membership == nullptr) {
@@ -98,9 +113,11 @@ double FCM::update_membership() {
     }
 
     // calculate degree of membership of each data point (image) regarding each cluster
-    for (int i = 0; i < i_data_points; ++i) {
-        for (int j = 0; j < i_num_clutsers; ++j) {
-            new_membership[i][j] =  calculate_membership_point(i, j);
+    for (int i = 0; i < i_rows; ++i) {
+        for (int j = 0; j < i_cols; ++j) {
+            for (int k = 0; k < i_num_clutsers; ++k) {
+                i_new_membership[i][j][k] = calculate_membership_point(i, j, k);
+            }
         }
     }
 
@@ -108,10 +125,11 @@ double FCM::update_membership() {
     diff = calculate_new_old_u_dist();
 
     // assign U(k + 1) to U(k)
-    // this could be a huge hit in performance...
-    for (int i = 0; i < i_data_points; ++i) {
-        for (int j = 0; j < i_num_clutsers; ++j) {
-            i_membership[i][j] = new_membership[i][j];
+    for (int i = 0; i < i_rows; ++i) {
+        for (int j = 0; j < i_cols; ++j) {
+            for (int k = 0; k < i_num_clutsers; ++k) {
+                i_membership[i][j][k] = i_new_membership[i][j][k];
+            }    
         }
     }
 
@@ -119,25 +137,22 @@ double FCM::update_membership() {
 }
 
 
-double FCM:: calculate_membership_point(int i, int j) {
-    // i: data #
-    // j: cluster #
-    double d_ij, d_ik, exp, aggr = 0.0;
-    for (int k = 0; k < i_num_clutsers; ++k) {
-        d_ik = eucl_distance(i, k);
-        d_ij = eucl_distance(i, j);
-        exp = pow((d_ij / d_ik), 2 / (i_m - 1));
-        aggr += exp;
+float FCM:: calculate_membership_point(int i, int j, int k) {
+    float d_center, d_all, aggr = 0.0;
+
+    d_center = eucl_distance(i_cluster_centers[k], i_image[i][j]);
+    for (int c = 0; c < i_num_clutsers; ++c) {
+        d_all = eucl_distance(i_cluster_centers[c], i_image[i][j]);
+        aggr += pow((d_center / d_all), 2 / (i_m - 1));
     }
 
     return 1 /aggr;
-
 }
 
 
 
-double FCM::calculate_new_old_u_dist() {
-    double diff = 0.0;
+float FCM::calculate_new_old_u_dist() {
+    float diff = 0.0;
     return diff;
 }
 

@@ -33,11 +33,11 @@ int main(int argc, char** argv )
     }
 
     for (int i = 0; i < rows; ++i) {
-        img[i] = norm_image.ptr<float>(i);
+        img[i] = norm_image.ptr<float>(i);;
     }
 
 
-    FCM fcm(norm_image, epsilon, rows, cols, num_clusters, m);
+    FCM fcm(img, epsilon, rows, cols, num_clusters, m);
 
     fcm.init_membership();
     fcm.init_centers();
