@@ -53,21 +53,33 @@ int main( int argc, char** argv )
 
     float *temp = new float[image.rows * image.cols];
 
-    // omp_set_num_threads(t);
+   //  omp_set_num_threads(atoi(argv[1]));
   	// start = chrono::high_resolution_clock::now();
-    // Convolve(img, outputx, image.rows, image.cols, maskx, 3);
-    // Convolve(img, outputy, image.rows, image.cols, masky, 3);
-    // end = chrono::high_resolution_clock::now();
-    // duration_sec = chrono::duration_cast<chrono::duration<double, milli>>(end - start);
+   //  Convolve(img, outputx, image.rows, image.cols, maskx, 3);
+   //  Convolve(img, outputy, image.rows, image.cols, masky, 3);
+   //  end = chrono::high_resolution_clock::now();
+   //  duration_sec = chrono::duration_cast<chrono::duration<double, milli>>(end - start);
 
-    omp_set_num_threads(atoi(argv[1]));
+   //  omp_set_num_threads(atoi(argv[1]));
+  	// start = chrono::high_resolution_clock::now();
+
+   //  convolve1D_horiz(img, temp, image.rows, image.cols, maskx1, 3);
+   //  convolve1D_vert(temp, outputx, image.rows, image.cols, maskx2, 3);
+
+   //  convolve1D_horiz(img, temp, image.rows, image.cols, masky1, 3);
+   //  convolve1D_vert(temp, outputy, image.rows, image.cols, masky2, 3);
+    
+   //  end = chrono::high_resolution_clock::now();
+   //  duration_sec = chrono::duration_cast<chrono::duration<double, milli>>(end - start);
+
+	omp_set_num_threads(atoi(argv[1]));
   	start = chrono::high_resolution_clock::now();
 
-    convolve1D_horiz(img, temp, image.rows, image.cols, maskx1, 3);
-    convolve1D_vert(temp, outputx, image.rows, image.cols, maskx2, 3);
+    convolve1D_horiz_opt(img, temp, image.rows, image.cols, maskx1, 3);
+    convolve1D_vert_opt(temp, outputx, image.rows, image.cols, maskx2, 3);
 
-    convolve1D_horiz(img, temp, image.rows, image.cols, masky1, 3);
-    convolve1D_vert(temp, outputy, image.rows, image.cols, masky2, 3);
+    convolve1D_horiz_opt(img, temp, image.rows, image.cols, masky1, 3);
+    convolve1D_vert_opt(temp, outputy, image.rows, image.cols, masky2, 3);
     
     end = chrono::high_resolution_clock::now();
     duration_sec = chrono::duration_cast<chrono::duration<double, milli>>(end - start);    

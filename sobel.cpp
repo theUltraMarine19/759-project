@@ -27,8 +27,8 @@ void Convolve(const float *image, float *output, size_t r, size_t c, const float
   }
 }
 
-void convolve1D_horiz(const float *image, float *output, size_t r, size_t c, const float *mask, size_t m) {
-  #pragma omp parallel for simd
+void convolve1D_horiz(const float* __restrict image, float* __restrict output, size_t r, size_t c, const float* __restrict mask, size_t m) {
+  #pragma omp parallel for simd collapse(2)
   for (size_t x = 0; x < r; x++) {
     for (size_t y = 1; y < c-1; y++) {
       output[x*c+y] = mask[0] * image[x*c + (y-(m-1)/2)] + 
@@ -43,8 +43,43 @@ void convolve1D_horiz(const float *image, float *output, size_t r, size_t c, con
   }
 }
 
-void convolve1D_vert(const float *image, float *output, size_t r, size_t c, const float *mask, size_t m) {
+// Store the intermediate output in column major format for next convolution. Loop interchange will cause loss in locality (1 LHS access to 3 RHS accesses) 
+void convolve1D_horiz_opt(const float* __restrict image, float* __restrict output, size_t r, size_t c, const float* __restrict mask, size_t m) {
+  #pragma omp parallel for simd collapse(2)
+  for (size_t x = 0; x < r; x++) {
+    for (size_t y = 1; y < c-1; y++) {
+      output[x+y*r] = mask[0] * image[x*c + (y-(m-1)/2)] + 
+                      mask[1] * image[x*c + (y+1-(m-1)/2)] + 
+                      mask[2] * image[x*c + (y+2-(m-1)/2)];
+    }
+  }
   #pragma omp parallel for simd
+  for (size_t x = 0; x < r; x++) {
+    output[x] = mask[1] * image[x*c] + mask[2] * image[x*c + 1];
+    output[x+r*(c-1)] = mask[0] * image[x*c + c-2] + mask[1] * image[x*c + c-1];
+  }
+}
+
+
+
+void convolve1D_vert_opt(const float* __restrict image, float* __restrict output, size_t r, size_t c, const float* __restrict mask, size_t m) {
+  #pragma omp parallel for simd collapse(2)
+  for (size_t y = 0; y < c; y++) {
+    for (size_t x = 1; x < r-1; x++) {
+      output[x*c+y] = mask[0] * image[(x-(m-1)/2) + y*r] + 
+                      mask[1] * image[(x+1-(m-1)/2) + y*r] + 
+                      mask[2] * image[(x+2-(m-1)/2) + y*r];
+    }
+  }
+  #pragma omp parallel for simd
+  for (size_t y = 0; y < c; y++) {
+    output[y] = mask[1] * image[y*r] + mask[2] * image[1 + y*r];
+    output[(r-1)*c+y] = mask[0] * image[(r-2) + y*r] + mask[1] * image[(r-1) +y*r];
+  }
+}
+
+void convolve1D_vert(const float* __restrict image, float* __restrict output, size_t r, size_t c, const float* __restrict mask, size_t m) {
+  #pragma omp parallel for simd collapse(2)
   for (size_t x = 1; x < r-1; x++) {
     for (size_t y = 0; y < c; y++) {
       // This hurts spatial locality
@@ -60,42 +95,3 @@ void convolve1D_vert(const float *image, float *output, size_t r, size_t c, cons
   }
 }
 
-// int main(int argc, char* argv[]) {
-  
-//   size_t n = atoi(argv[1]);
-//   int t = atoi(argv[2]);
-
-//   float* image = new float[n * n];
-
-  
-//   for (size_t i = 0; i < n * n; i++) {
-//     image[i] = 1.0;
-//   }
-
-//   omp_set_num_threads(t);
-//   start = chrono::high_resolution_clock::now();
-//   Convolve(image, outputx, n, maskx, 3);
-//   Convolve(image, outputy, n, masky, 3); 
-//   end = chrono::high_resolution_clock::now();
-
-//   duration_sec = chrono::duration_cast<chrono::duration<double, milli>>(end - start);
-
-//   // cout << output[0] << "\n"
-//        // << output[n * n - 1] << "\n" 
-//   cout << duration_sec.count() << "\n";
-       
-
-//   for (size_t i = 0; i < n*n; i++)
-//     cout << outputx[i] << " ";
-//   cout << endl;
-
-//   for (size_t i = 0; i < n*n; i++)
-//     cout << outputy[i] << " ";
-//   cout << endl;
-
-//   delete[] image;
-//   delete[] outputx;
-//   delete[] outputy;
-  
-//   return 0;
-// }
