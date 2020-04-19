@@ -23,8 +23,8 @@ int main(int argc, char** argv )
     normalize(image, norm_image, 0, 1, NORM_MINMAX, CV_32F);
     
     int rows = image.rows, cols = image.cols;
-    int num_clusters = 4, m = 2;
-    float epsilon = 0.05;
+    int num_clusters = 4, m = 2, epochs = 100;
+    float epsilon = 0.05, mem_diff = 0;
 
     float **img = new float*[rows];
 
@@ -41,8 +41,18 @@ int main(int argc, char** argv )
 
     fcm.init_membership();
     fcm.init_centers();
-    fcm.update_centers();
 
+    // run for 100 epochs
+    for (int i = 0; i < epochs; ++i) {
+        fcm.update_centers();
+        fcm.update_membership();
+    }
+
+    // repaint image with corresponding cluster (255 / num_clusters)
+
+    // normalize image
+
+    // show image
 
     cout << image.size() << endl;
 
@@ -50,5 +60,6 @@ int main(int argc, char** argv )
     imshow("Display Image", image);
     waitKey(0);
 
+    delete fcm;
     return 0;
 }
