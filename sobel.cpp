@@ -20,7 +20,7 @@ void Convolve(const float *image, float *output, size_t r, size_t c, const float
         for (size_t j = 0; j < m; j++) {
           if ((x + i - (m - 1) / 2) < r && (y + j - (m - 1) / 2) < c) {
           	// cout << x << " " << y << " " << i << " " << j << endl;
-          	output[x * c + y] += mask[i * m + j] * image[(x + i - (m - 1) / 2) * c + (y + j - (m - 1) / 2)];
+          	output[x * c + y] += mask[i * m + j] * (float)image[(x + i - (m - 1) / 2) * c + (y + j - (m - 1) / 2)];
           	// cout << output[x*c+y] << endl;
           }
         }

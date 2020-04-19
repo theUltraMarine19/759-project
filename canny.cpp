@@ -15,7 +15,7 @@ void generateGaussian(float *filter, size_t m, float sigma) {
 			sum += filter[i*m+j];
 		}
 	}
-	cout << "Midpt\n";
+	// cout << "Midpt\n";
 	#pragma omp for simd collapse(2)
 	for (size_t i = 0; i < m; i++) {
 		for (size_t j = 0; j < m; j++) {
@@ -63,17 +63,6 @@ void NonMaxSuppresion(float *grad, float* magn, float* supp, size_t r, size_t c)
 					supp[i*c+j] = 0.0;
 
 		}
-	}
-
-	#pragma omp for
-	for (int i = 0; i < r; i++) {
-		supp[i*c+0] = grad[i*c+0];
-		supp[i*c+c-1] = grad[i*c+c-1];
-	}
-	#pragma omp for
-	for (int j = 0; j < c; j++) {
-		supp[0*c+j] = grad[0*c+j];
-		supp[(r-1)*c+j] = grad[(r-1)*c+j];
 	}	
 }
 
@@ -84,7 +73,7 @@ void threshold(float* supp, size_t r, size_t c, float low, float high) {
 			if (supp[i*c+j] < low)
 				supp[i*c+j] = 0.0;
 			if (supp[i*c+j] > high)
-				supp[i*c+j] = 255.0;
+				supp[i*c+j] = 1.0;
 		}
 	}
 }
@@ -103,7 +92,7 @@ void hysteresis(float *supp, size_t r, size_t c, float low, float high) {
 						else {
 							if (supp[pr*c+pc] > high) {
 								hasHighNei = true;
-								supp[i*c+j] = 255.0;
+								supp[i*c+j] = 1.0;
 								break;
 							}
 							else if (supp[pr*c+pc] > low && supp[pr*c+pc] < high)
