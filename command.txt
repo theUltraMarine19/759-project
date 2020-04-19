@@ -1,0 +1,1 @@
+g++ imread.cpp `pkg-config --cflags --libs ~/installation/OpenCV-3.4.4/lib/pkgconfig/opencv.pc` -o imread.o

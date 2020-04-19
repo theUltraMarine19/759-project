@@ -1,3 +1,5 @@
 */*.err
 */*.out
-*/*.o
+*.o
+installation/
+opencv/

@@ -4,4 +4,4 @@
 #SBATCH -o sobel.out -e sobel.err
 
 g++ sobel.cpp -Wall -O3 -o sobel -fopenmp
-./sobel 10 20
+./sobel 1024 20
