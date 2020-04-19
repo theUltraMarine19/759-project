@@ -1,6 +1,6 @@
-#include "/home/arijit/installation/OpenCV-3.4.4/include/opencv2/core.hpp"
-#include "/home/arijit/installation/OpenCV-3.4.4/include/opencv2/imgcodecs.hpp"
-#include "/home/arijit/installation/OpenCV-3.4.4/include/opencv2/highgui.hpp"
+#include "/srv/home/arijit/installation/OpenCV-3.4.4/include/opencv2/core.hpp"
+#include "/srv/home/arijit/installation/OpenCV-3.4.4/include/opencv2/imgcodecs.hpp"
+#include "/srv/home/arijit/installation/OpenCV-3.4.4/include/opencv2/highgui.hpp"
 #include <iostream>
 #include <cmath>
 #include "sobel.h"
@@ -17,15 +17,15 @@ int main( int argc, char** argv )
         cout <<  "Could not open or find the image" << std::endl ;
         return -1;
     }
-    namedWindow( "Display window", WINDOW_AUTOSIZE );
-    imshow( "Display window", image);
-    waitKey(0);
+    // namedWindow( "Display window", WINDOW_AUTOSIZE );
+    // imshow( "Display window", image);
+    // waitKey(0);
     
     normalize(image, norm_image, 0, 1, NORM_MINMAX, CV_32F);
     float *img = norm_image.ptr<float>(0);
 
-    imshow( "Display window", norm_image);
-    waitKey(0);
+    // imshow( "Display window", norm_image);
+    // waitKey(0);
     cout << image.rows << " " << image.cols << endl;
 
     // for (int i = 0; i < norm_image.rows; i++) {
@@ -77,7 +77,7 @@ int main( int argc, char** argv )
     //     cout << endl;
     // }    
 
-    imshow( "Display window", norm_out);
-    waitKey(0);
+    // imshow( "Display window", norm_out);
+    // waitKey(0);
     return 0;
 }
