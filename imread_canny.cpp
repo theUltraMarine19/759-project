@@ -88,7 +88,26 @@ int main( int argc, char** argv )
 
     /* get the output Gy, by convolution with Sobel operator */
     convolve1D_horiz(smooth_img, temp, image.rows, image.cols, masky1, 3);
-    convolve1D_vert(temp, outputy, image.rows, image.cols, masky2, 3);    
+    convolve1D_vert(temp, outputy, image.rows, image.cols, masky2, 3);
+
+    // Mat ox = Mat(image.rows, image.cols, CV_32F, outputx);
+    // Mat oy = Mat(image.rows, image.cols, CV_32F, outputy);
+    // Mat norm_ox, norm_oy;
+    // normalize(ox, norm_ox, 0, 1, NORM_MINMAX, CV_32F);
+    // normalize(oy, norm_oy, 0, 1, NORM_MINMAX, CV_32F);
+    
+    // imshow( "Display window", ox);
+    // waitKey(0);
+    // imshow( "Display window", oy);
+    // waitKey(0);
+
+    // imshow( "Display window", norm_ox);
+    // waitKey(0);
+    // imshow( "Display window", norm_oy);
+    // waitKey(0);
+
+    // outputx = ox.ptr<float>(0);
+    // outputy = oy.ptr<float>(0);
 
     // #pragma omp for simd collapse(2)
     // for (int i = 0; i < image.rows; i++) {
@@ -121,28 +140,33 @@ int main( int argc, char** argv )
     imshow( "Display window", norm_out);
     waitKey(0);    
 
-    // for (int i = 0; i < out.rows; i++) {
-    //     for (int j = 0; j < out.cols; j++) {
-    //         cout << supp[i*out.cols+j] << " ";
-    //     }
-    //     cout << endl;
-    // }    
+    double minVal, maxVal;
+    minMaxLoc(norm_out, &minVal, &maxVal);
+
+    cout << minVal << " " << maxVal << endl;
 
     float* norm_supp = norm_out.ptr<float>(0);
 
+
+    // for (int i = 0; i < out.rows; i++) {
+    //     for (int j = 0; j < out.cols; j++) {
+    //         // cout << supp[i*out.cols+j] << " ";
+    //     }
+    //     cout << endl;
+    // }
+
+    hysteresis(norm_supp, image.rows, image.cols, 0.08, 0.11);
+
     // for (int i = 0; i < norm_out.rows; i++) {
-    //     for (int j = 0; j < norm_out.cols; j++) {
+    //     for (int j = 0; j < 10; j++) {
     //         cout << norm_supp[i*out.cols+j] << " ";
     //     }
     //     cout << endl;
     // }
 
-
-    threshold(norm_supp, image.rows, image.cols, 0.05, 0.95);
-
     out = Mat(image.rows, image.cols, CV_32F, norm_supp);
-    imshow( "Display window", out);
-    waitKey(0);
+    // imshow( "Display window", out);
+    // waitKey(0);
 
     normalize(out, norm_out, 0, 1, NORM_MINMAX, CV_32F);
     imshow( "Display window", norm_out);
