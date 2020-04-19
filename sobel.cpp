@@ -1,9 +1,6 @@
-// #include <chrono>
 #include <cstdlib>
 #include <iostream>
-// #include <ratio>
 
-#include <omp.h>
 #include "sobel.h"
 
 using namespace std;
@@ -14,14 +11,15 @@ void Convolve(const float *image, float *output, size_t r, size_t c, const float
   // merge nested loops into 1 (no data dependencies)
   for (size_t x = 0; x < r; x++) {
     for (size_t y = 0; y < c; y++) {
+      
       output[x * c + y] = 0;
-      // #pragma omp simd
+      
       for (size_t i = 0; i < m; i++) {
         for (size_t j = 0; j < m; j++) {
           if ((x + i - (m - 1) / 2) < r && (y + j - (m - 1) / 2) < c) {
-          	// cout << x << " " << y << " " << i << " " << j << endl;
-          	output[x * c + y] += mask[i * m + j] * (float)image[(x + i - (m - 1) / 2) * c + (y + j - (m - 1) / 2)];
-          	// cout << output[x*c+y] << endl;
+          	
+            output[x * c + y] += mask[i * m + j] * (float)image[(x + i - (m - 1) / 2) * c + (y + j - (m - 1) / 2)];
+          
           }
         }
       }
@@ -30,7 +28,7 @@ void Convolve(const float *image, float *output, size_t r, size_t c, const float
 }
 
 void convolve1D_horiz(const float *image, float *output, size_t r, size_t c, const float *mask, size_t m) {
-  #pragma omp for simd collapse(2)
+  #pragma omp parallel for simd
   for (size_t x = 0; x < r; x++) {
     for (size_t y = 1; y < c-1; y++) {
       output[x*c+y] = mask[0] * image[x*c + (y-(m-1)/2)] + 
@@ -38,7 +36,7 @@ void convolve1D_horiz(const float *image, float *output, size_t r, size_t c, con
                       mask[2] * image[x*c + (y+2-(m-1)/2)];
     }
   }
-  #pragma omp for simd
+  #pragma omp parallel for simd
   for (size_t x = 0; x < r; x++) {
     output[x*c] = mask[1] * image[x*c] + mask[2] * image[x*c + 1];
     output[x*c+c-1] = mask[0] * image[x*c + c-2] + mask[1] * image[x*c + c-1];
@@ -46,7 +44,7 @@ void convolve1D_horiz(const float *image, float *output, size_t r, size_t c, con
 }
 
 void convolve1D_vert(const float *image, float *output, size_t r, size_t c, const float *mask, size_t m) {
-  #pragma omp for simd collapse(2)
+  #pragma omp parallel for simd
   for (size_t x = 1; x < r-1; x++) {
     for (size_t y = 0; y < c; y++) {
       // This hurts spatial locality
@@ -55,7 +53,7 @@ void convolve1D_vert(const float *image, float *output, size_t r, size_t c, cons
                       mask[2] * image[(x+2-(m-1)/2)*c + y];
     }
   }
-  #pragma omp for simd
+  #pragma omp parallel for simd
   for (size_t y = 0; y < c; y++) {
     output[y] = mask[1] * image[y] + mask[2] * image[c + y];
     output[(r-1)*c+y] = mask[0] * image[(r-2)*c + y] + mask[1] * image[(r-1)*c +y];
@@ -73,10 +71,6 @@ void convolve1D_vert(const float *image, float *output, size_t r, size_t c, cons
 //   for (size_t i = 0; i < n * n; i++) {
 //     image[i] = 1.0;
 //   }
-
-//   chrono::high_resolution_clock::time_point start;
-//   chrono::high_resolution_clock::time_point end;
-//   chrono::duration<double, milli> duration_sec;
 
 //   omp_set_num_threads(t);
 //   start = chrono::high_resolution_clock::now();

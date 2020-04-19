@@ -3,5 +3,5 @@
 #SBATCH -J sobel
 #SBATCH -o sobel.out -e sobel.err
 
-g++ sobel.cpp -Wall -O3 -o sobel -fopenmp
-./sobel 1024 20
+g++ imread.cpp sobel.cpp `pkg-config --cflags --libs ~/installation/OpenCV-3.4.4/lib64/pkgconfig/opencv.pc` -O3 -o imread.o -fopenmp -fno-tree-vectorize -march=native -fopt-info-vec
+./imread.o 8
