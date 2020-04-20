@@ -117,19 +117,24 @@ void NonMaxSuppresion(float *grad, float* magn, float* supp, size_t r, size_t c)
 
 /* OMP Tasks */
 void hysteresis(float* supp, size_t r, size_t c, float low, float high) {
-	for (int i = 0; i < r; i++) {
-		for (int j = 0; j < c; j++) {
-			if (supp[i*c+j] > high) {
-				supp[i*c+j] = 1.0;
-				rec_hysteresis(supp, i, j, r, c, low, high);
+	#pragma omp parallel
+	{
+		#pragma omp for simd
+		for (int i = 0; i < r; i++) {
+			for (int j = 0; j < c; j++) {
+				if (supp[i*c+j] > high) {
+					supp[i*c+j] = 1.0;
+					rec_hysteresis(supp, i, j, r, c, low, high);
+				}
 			}
 		}
-	}
-
-	for (int i = 0; i < r; i++) {
-		for (int j = 0; j < c; j++) {
-			if (supp[i*c+j] != 1.0) {
-				supp[i*c+j] = 0.0;
+	
+		#pragma omp for simd collapse(2)
+		for (int i = 0; i < r; i++) {
+			for (int j = 0; j < c; j++) {
+				if (supp[i*c+j] != 1.0) {
+					supp[i*c+j] = 0.0;
+				}
 			}
 		}
 	}
