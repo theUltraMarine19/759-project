@@ -15,7 +15,7 @@ using namespace std;
 int main( int argc, char** argv )
 {
     Mat image, norm_image;
-    image = imread("Swimming-club.jpg", 0); 	// Read the file
+    image = imread("license.jpg", 0); 	// Read the file
     if(image.empty())                      		// Check for invalid input
     {
         cout <<  "Could not open or find the image" << std::endl ;
@@ -47,79 +47,94 @@ int main( int argc, char** argv )
     float masky1[3] = {1, 2, 1};
     float masky2[3] = {1, 0, -1};
 
-    float* outputx = new float[image.rows * image.cols];
-    float* outputy = new float[image.rows * image.cols];
+    float* outputx = new float[image.rows * image.cols * 1];
+    float* outputy = new float[image.rows * image.cols * 1];
     float* output = new float[image.rows * image.cols];
 
-    float *temp = new float[image.rows * image.cols];
+    float *temp = new float[image.rows * image.cols * 1];
 
-   //  omp_set_num_threads(atoi(argv[1]));
+    // omp_set_num_threads(atoi(argv[1]));
   	// start = chrono::high_resolution_clock::now();
-   //  Convolve(img, outputx, image.rows, image.cols, maskx, 3);
-   //  Convolve(img, outputy, image.rows, image.cols, masky, 3);
-   //  end = chrono::high_resolution_clock::now();
-   //  duration_sec = chrono::duration_cast<chrono::duration<double, milli>>(end - start);
+    //  Convolve(img, outputx, image.rows, image.cols, maskx, 3);
+    //  Convolve(img, outputy, image.rows, image.cols, masky, 3);
+    //  end = chrono::high_resolution_clock::now();
+    //  duration_sec = chrono::duration_cast<chrono::duration<double, milli>>(end - start);
 
-   omp_set_num_threads(atoi(argv[1]));
-
-	for (int i = 0; i < 3; i++) {
-
-		convolve1D_horiz(img, temp, image.rows, image.cols, maskx1, 3);
-	    convolve1D_vert(temp, outputx, image.rows, image.cols, maskx2, 3);
-
-	    convolve1D_horiz(img, temp, image.rows, image.cols, masky1, 3);
-	    convolve1D_vert(temp, outputy, image.rows, image.cols, masky2, 3);	
-	
-	}
-  	
-  	start = chrono::high_resolution_clock::now();
-
-  	for (int i = 0; i < 10; i++) {
-
-	   	convolve1D_horiz(img, temp, image.rows, image.cols, maskx1, 3);
-	    convolve1D_vert(temp, outputx, image.rows, image.cols, maskx2, 3);
-
-	    convolve1D_horiz(img, temp, image.rows, image.cols, masky1, 3);
-	    convolve1D_vert(temp, outputy, image.rows, image.cols, masky2, 3);
-  	}    
-    
-    end = chrono::high_resolution_clock::now();
-    duration_sec = chrono::duration_cast<chrono::duration<double, milli>>(end - start);
-   
-    
- //   omp_set_num_threads(atoi(argv[1]));
+    // omp_set_num_threads(atoi(argv[1]));
 
 	// for (int i = 0; i < 3; i++) {
 
-	// 	convolve1D_horiz_opt(img, temp, image.rows, image.cols, maskx1, 3);
-	//     convolve1D_vert_opt(temp, outputx, image.rows, image.cols, maskx2, 3);
+	// 	convolve1D_horiz(img, temp, image.rows, image.cols, maskx1, 3);
+	//     convolve1D_vert(temp, outputx, image.rows, image.cols, maskx2, 3);
 
-	//     convolve1D_horiz_opt(img, temp, image.rows, image.cols, masky1, 3);
-	//     convolve1D_vert_opt(temp, outputy, image.rows, image.cols, masky2, 3);	
+	//     convolve1D_horiz(img, temp, image.rows, image.cols, masky1, 3);
+	//     convolve1D_vert(temp, outputy, image.rows, image.cols, masky2, 3);	
 	
 	// }
   	
- //  	start = chrono::high_resolution_clock::now();
+  	start = chrono::high_resolution_clock::now();
 
- //  	for (int i = 0; i < 10; i++) {
+    #pragma omp parallel num_threads(atoi(argv[1]))
+    {
+  	    // for (int i = 0; i < 10; i++) {
 
- //  		convolve1D_horiz_opt(img, temp, image.rows, image.cols, maskx1, 3);
-	//     convolve1D_vert_opt(temp, outputx, image.rows, image.cols, maskx2, 3);
+	   	   convolve1D_horiz(img, temp, image.rows, image.cols, maskx1, 3);
+           // for (int i = 0; i < image.rows * image.cols; i++)
+           //      temp[i] = temp[i*16];
+	       convolve1D_vert(temp, outputx, image.rows, image.cols, maskx2, 3);
+           // for (int i = 0; i < image.rows * image.cols; i++)
+           //      outputx[i] = outputx[i*16];
 
-	//     convolve1D_horiz_opt(img, temp, image.rows, image.cols, masky1, 3);
-	//     convolve1D_vert_opt(temp, outputy, image.rows, image.cols, masky2, 3);
+	       convolve1D_horiz(img, temp, image.rows, image.cols, masky1, 3);
+           // for (int i = 0; i < image.rows * image.cols; i++)
+           //      temp[i] = temp[i*16];
+           convolve1D_vert(temp, outputy, image.rows, image.cols, masky2, 3);
+           // for (int i = 0; i < image.rows * image.cols; i++)
+           //      outputy[i] = outputy[i*16];
 
- //  	}    
+  	    // }    
     
-    end = chrono::high_resolution_clock::now();
-    duration_sec = chrono::duration_cast<chrono::duration<double, milli>>(end - start);    
+    
+   
+    
+        //   omp_set_num_threads(atoi(argv[1]));
 
-    #pragma omp parallel for simd collapse(2)
-    for (int i = 0; i < image.rows; i++) {
-        for (int j = 0; j < image.cols; j++) {
-            output[i*image.cols+j] = sqrt(outputx[i*image.cols+j]*outputx[i*image.cols+j] + outputy[i*image.cols+j]*outputy[i*image.cols+j]);
+    	// for (int i = 0; i < 3; i++) {
+
+    	// 	convolve1D_horiz_opt(img, temp, image.rows, image.cols, maskx1, 3);
+    	//     convolve1D_vert_opt(temp, outputx, image.rows, image.cols, maskx2, 3);
+
+    	//     convolve1D_horiz_opt(img, temp, image.rows, image.cols, masky1, 3);
+    	//     convolve1D_vert_opt(temp, outputy, image.rows, image.cols, masky2, 3);	
+    	
+    	// }
+  	
+        // start = chrono::high_resolution_clock::now();
+
+        // for (int i = 0; i < 10; i++) {
+
+        //     convolve1D_horiz_opt(img, temp, image.rows, image.cols, maskx1, 3);
+    	//     convolve1D_vert_opt(temp, outputx, image.rows, image.cols, maskx2, 3);
+
+    	//     convolve1D_horiz_opt(img, temp, image.rows, image.cols, masky1, 3);
+    	//     convolve1D_vert_opt(temp, outputy, image.rows, image.cols, masky2, 3);
+
+        // }    
+        
+        // end = chrono::high_resolution_clock::now();
+        // duration_sec = chrono::duration_cast<chrono::duration<double, milli>>(end - start);    
+
+        #pragma omp for simd collapse(2)
+        for (int i = 0; i < image.rows; i++) {
+            for (int j = 0; j < image.cols; j++) {
+                output[i*image.cols+j] = sqrt(outputx[i*image.cols+j]*outputx[i*image.cols+j] + outputy[i*image.cols+j]*outputy[i*image.cols+j]);
+            }
         }
+
     }
+
+    end = chrono::high_resolution_clock::now();
+    duration_sec = chrono::duration_cast<chrono::duration<double, milli>>(end - start);
 
     Mat out = Mat(image.rows, image.cols, CV_32F, output);
     Mat norm_out;
@@ -132,11 +147,11 @@ int main( int argc, char** argv )
     //     cout << endl;
     // }
 
-    cout << duration_sec.count()/10.0 << endl;
+    cout << duration_sec.count() << endl;
 
     Mat write_out;
     normalize(norm_out, write_out, 0, 255, NORM_MINMAX, CV_8U);
-    imwrite("sobel.png", write_out);  
+    imwrite("sobel1.png", write_out);  
 
     delete[] outputx;
     delete[] outputy;
