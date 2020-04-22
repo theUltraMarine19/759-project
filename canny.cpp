@@ -7,19 +7,24 @@ using namespace std;
 void generateGaussian(float *filter, size_t m, float sigma) {
 	float deno = 2 * sigma * sigma;
 	float sum = 0;
-	#pragma omp parallel for simd reduction(+:sum) collapse(2)
-	for (size_t i = 0; i < m; i++) {
-		for (size_t j = 0; j < m; j++) {
-			// cout << 1.0/exp(((i-m/2)*(i-m/2) + (j-m/2)*(j-m/2))/deno) << endl;
-			filter[i*m+j] = 1.0/( exp(((i-m/2)*(i-m/2) + (j-m/2)*(j-m/2))/deno) * (deno * M_PI) );
-			sum += filter[i*m+j];
-		}
-	}
 	
-	/* flatten to one loop in an effort for simd */
-	#pragma omp parallel for simd
-	for (size_t i = 0; i < m*m; i++) {
-		filter[i] /= sum;
+	#pragma omp parallel 
+	{	
+
+		#pragma omp for simd reduction(+:sum) collapse(2)
+		for (size_t i = 0; i < m; i++) {
+			for (size_t j = 0; j < m; j++) {
+				// cout << 1.0/exp(((i-m/2)*(i-m/2) + (j-m/2)*(j-m/2))/deno) << endl;
+				filter[i*m+j] = 1.0/( exp(((i-m/2)*(i-m/2) + (j-m/2)*(j-m/2))/deno) * (deno * M_PI) );
+				sum += filter[i*m+j];
+			}
+		}
+	
+		/* flatten to one loop in an effort for simd */
+		#pragma omp for simd
+		for (size_t i = 0; i < m*m; i++) {
+			filter[i] /= sum;
+		}
 	}
 }
 
