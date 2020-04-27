@@ -20,6 +20,15 @@
 
 __global__ void conv_kernel(const float* image, const float* mask, float* output, unsigned int r, unsigned int c);
 
+// No shared memory version
+
+__global__ void conv_kernel_no_shmem(const float* image, const float* mask, float* output, unsigned int r, unsigned int c);
+
+// 1D versions with shared memory
+
+__global__ void conv_kernel_horiz(const float* image, const float* mask, float* output, unsigned int r, unsigned int c);
+__global__ void conv_kernel_vert(const float* image, const float* mask, float* output, unsigned int r, unsigned int c);
+
 // Computes the magnitude of the gradient from x-component (stored in outx) and y-component (stored in outy) into out
 // Each thread computes one element of out
 // No shared memory since one thread doesn't work on the data used by another thread
@@ -39,5 +48,6 @@ __global__ void magnitude(const float* outx, const float *outy, float* out, unsi
 // - threads_per_block >= 1
 
 __host__ void conv(const float* image, const float* mask, float* output, unsigned int r, unsigned int c, unsigned int bdx, unsigned int bdy);
+__host__ void conv_opt(const float* image, const float* mask1, float* mask2, float* output, unsigned int r, unsigned int c, unsigned int bdx, unsigned int bdy);
 
 #endif
