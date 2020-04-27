@@ -78,23 +78,25 @@ int main( int argc, char** argv )
     {
   	    // for (int i = 0; i < 10; i++) {
 
-	   	   convolve1D_horiz(img, temp, image.rows, image.cols, maskx1, 3);
+	   	   // convolve1D_horiz(img, temp, image.rows, image.cols, maskx1, 3);
            // for (int i = 0; i < image.rows * image.cols; i++)
            //      temp[i] = temp[i*16];
-	       convolve1D_vert(temp, outputx, image.rows, image.cols, maskx2, 3);
+	       // convolve1D_vert(temp, outputx, image.rows, image.cols, maskx2, 3);
            // for (int i = 0; i < image.rows * image.cols; i++)
            //      outputx[i] = outputx[i*16];
 
-	       convolve1D_horiz(img, temp, image.rows, image.cols, masky1, 3);
+	       // convolve1D_horiz(img, temp, image.rows, image.cols, masky1, 3);
            // for (int i = 0; i < image.rows * image.cols; i++)
            //      temp[i] = temp[i*16];
-           convolve1D_vert(temp, outputy, image.rows, image.cols, masky2, 3);
+           // convolve1D_vert(temp, outputy, image.rows, image.cols, masky2, 3);
            // for (int i = 0; i < image.rows * image.cols; i++)
            //      outputy[i] = outputy[i*16];
 
-  	    // }    
+  	    // }
+
+            Convolve(img, outputx, image.rows, image.cols, maskx, 3);    
     
-    
+            Convolve(img, outputy, image.rows, image.cols, masky, 3);
    
     
         //   omp_set_num_threads(atoi(argv[1]));
