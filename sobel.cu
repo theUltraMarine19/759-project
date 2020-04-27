@@ -4,12 +4,41 @@
 #include "sobel.cuh"
 using namespace std;
 
+__global__ void conv_kernel_no_shmem(const float* image, const float* mask, float* output, unsigned int r, unsigned int c) {
+
+	int tidx = threadIdx.x, tidy = threadIdx.y;
+	int bidx = blockIdx.x, bidy = blockIdx.y;
+	int bdy = blockDim.y, bdx = blockDim.x;
+	float avg_intensity = 0;
+
+	long x_idx = tidx + (long)bdx * (long)bidx; 		// long since can be > 2^31 -1
+	long y_idx = tidy + (long)bdy * (long)bidy;
+
+	int idx = y_idx*c+x_idx;
+	
+	float temp = 0;
+	
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			
+			if (x_idx-1+j < c && y_idx-1+i < r && x_idx-1+j >= 0 && y_idx-1+i >= 0)
+				temp += image[(y_idx-1+i)*c + x_idx-1+j] * mask[i*3+j];
+			else	
+				temp += avg_intensity * mask[i*3+j];
+		}
+	}
+
+	if (y_idx < r && x_idx < c)
+		output[idx] = temp;
+
+}
+
 __global__ void conv_kernel(const float* image, const float* mask, float* output, unsigned int r, unsigned int c) {
 	
 	int tidx = threadIdx.x, tidy = threadIdx.y;
 	int bidx = blockIdx.x, bidy = blockIdx.y;
 	int bdy = blockDim.y, bdx = blockDim.x;
-	float avg_intensity = 0.5;
+	float avg_intensity = 0;
 
 	// printf("%d %d %d %d\n", tidx, tidy, bidx, bidy);
 	// if (tidx == 0 && tidy == 0 && bidx == 0 && bidy == 0) {
@@ -110,22 +139,22 @@ __global__ void conv_kernel(const float* image, const float* mask, float* output
 
 	__syncthreads();
 
-	if (tidx == 2 && tidy == 1 && bidx == 21 && bidy == 30) {
+	// if (tidx == 2 && tidy == 1 && bidx == 21 && bidy == 30) {
 		
-		for (int i = 0; i < bdy+2; i++) {
-			for (int j = 0; j < bdx+2; j++ ) {
-				printf("%f ", img[i*(bdx+2)+j]);	
-			}
-			printf("\n");	
-		}
+	// 	for (int i = 0; i < bdy+2; i++) {
+	// 		for (int j = 0; j < bdx+2; j++ ) {
+	// 			printf("%f ", img[i*(bdx+2)+j]);	
+	// 		}
+	// 		printf("\n");	
+	// 	}
 
-		for (int i = -1; i < bdy+1; i++) {
-			for (int j = -1; j < bdx+1; j++ ) {
-				printf("%f ", image[(bidy*bdy+i)*c+(bidx*bdx+j)]);	
-			}
-			printf("\n");	
-		}		
-	}
+	// 	for (int i = -1; i < bdy+1; i++) {
+	// 		for (int j = -1; j < bdx+1; j++ ) {
+	// 			printf("%f ", image[(bidy*bdy+i)*c+(bidx*bdx+j)]);	
+	// 		}
+	// 		printf("\n");	
+	// 	}		
+	// }
 
 	out[tidy*bdx+tidx] = 0;
 	for (int i = 0; i < 3; i++) {
@@ -154,6 +183,7 @@ __host__ void conv(const float* image, const float* mask, float* output, unsigne
 	// }
 
 	conv_kernel<<<grid, block, sizeof(float) * (bdx + 2) * (bdy + 2) + 3 * 3 * sizeof(float) + sizeof(float) * bdx * bdy>>>(image, mask, output, r, c);
+	// conv_kernel_no_shmem<<<grid, block>>>(image, mask, output, r, c);
 	
 	cudaError_t err;
 	// // Check for kernel launch errors

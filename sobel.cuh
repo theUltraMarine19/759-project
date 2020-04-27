@@ -20,6 +20,10 @@
 
 __global__ void conv_kernel(const float* image, const float* mask, float* output, unsigned int r, unsigned int c);
 
+// No shared memory version
+
+__global__ void conv_kernel_no_shmem(const float* image, const float* mask, float* output, unsigned int r, unsigned int c);
+
 // Computes the magnitude of the gradient from x-component (stored in outx) and y-component (stored in outy) into out
 // Each thread computes one element of out
 // No shared memory since one thread doesn't work on the data used by another thread
