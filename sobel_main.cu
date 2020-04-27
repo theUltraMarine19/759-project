@@ -53,18 +53,15 @@ int main(int argc, char* argv[]) {
     float masky1[3] = {1, 2, 1};
     float masky2[3] = {1, 0, -1};
 
-	float *dimg, *outx, *outy, *output, *temp;
-	err = cudaMalloc((void **)&dimg, image.rows * image.cols * sizeof(float));
-	// cout << cudaGetErrorName(err) << endl;
+    float *dimg, *outx, *outy, *output;
+    err = cudaMalloc((void **)&dimg, image.rows * image.cols * sizeof(float));
+	  // cout << cudaGetErrorName(err) << endl;
   	err = cudaMallocManaged((void **)&outx, image.rows * image.cols * sizeof(float));
   	// cout << cudaGetErrorName(err) << endl;
   	err = cudaMallocManaged((void **)&outy, image.rows * image.cols * sizeof(float));
   	// cout << cudaGetErrorName(err) << endl;
   	err = cudaMallocManaged((void **)&output, image.rows * image.cols * sizeof(float));
   	// cout << cudaGetErrorName(err) << endl;
-  	err = cudaMallocManaged((void **)&temp, image.rows * image.cols * sizeof(float));	
-	// cout << cudaGetErrorName(err) << endl;
-  	
   	
   	float *dmaskx, *dmasky, *dmaskx1, *dmaskx2; // masky1 = maskx2 and masky2 = maskx1
   	err = cudaMalloc((void **)&dmaskx, 9 * sizeof(float));
@@ -92,12 +89,15 @@ int main(int argc, char* argv[]) {
   	cudaEventRecord(start);
   	conv(dimg, dmaskx, outx, image.rows, image.cols, bdx, bdy);
   	conv(dimg, dmasky, outy, image.rows, image.cols, bdx, bdy);
-  	
- 	dim3 block(bdx, bdy);
-	dim3 grid((image.cols + block.x - 1) / block.x, (image.rows + block.y - 1) / block.y);
- 	magnitude<<<grid, block>>>(outx, outy, output, image.rows, image.cols);
- 	err = cudaDeviceSynchronize();
-  	cout << cudaGetErrorName(err) << endl;
+
+    // conv_opt(dimg, dmaskx1, dmaskx2, outx, image.rows, image.cols, bdx, bdy);
+    // conv_opt(dimg, dmaskx2, dmaskx1, outy, image.rows, image.cols, bdx, bdy);
+     	
+   	dim3 block(bdx, bdy);
+  	dim3 grid((image.cols + block.x - 1) / block.x, (image.rows + block.y - 1) / block.y);
+   	magnitude<<<grid, block>>>(outx, outy, output, image.rows, image.cols);
+   	err = cudaDeviceSynchronize();
+  	// cout << cudaGetErrorName(err) << endl;
   	
   	cudaEventRecord(stop);
   	cudaEventSynchronize(stop);
@@ -122,8 +122,6 @@ int main(int argc, char* argv[]) {
   	err = cudaFree(outy);
   	// cout << cudaGetErrorName(err) << endl;
   	err = cudaFree(output);
-  	// cout << cudaGetErrorName(err) << endl;
-  	err = cudaFree(temp);
   	// cout << cudaGetErrorName(err) << endl;
   	err = cudaFree(dmaskx);
   	// cout << cudaGetErrorName(err) << endl;
