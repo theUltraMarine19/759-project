@@ -6,7 +6,7 @@
 using namespace std;
 
 void Convolve(const float *image, float *output, size_t r, size_t c, const float *mask, size_t m) {
-  #pragma omp for collapse(2)
+  #pragma omp for simd collapse(2)
   // schedule(static) by default since balanced loops
   // merge nested loops into 1 (no data dependencies)
   for (size_t x = 0; x < r; x++) {
