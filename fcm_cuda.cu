@@ -3,7 +3,7 @@
 #include <fstream>
 
 
-__host__ void init_membership() {
+__host__ void init_membership(float ***i_membership) {
     // cout << i_cols << endl;
     // cout << i_rows << endl;
     i_membership = new float** [i_rows];
@@ -11,10 +11,10 @@ __host__ void init_membership() {
 
     for (int i = 0; i < i_rows; ++i) {
         i_membership[i] = new float* [i_cols];
-        i_new_membership[i] = new float* [i_cols];
+        // i_new_membership[i] = new float* [i_cols];
         for (int j = 0; j < i_cols; ++j) {
             i_membership[i][j] = new float[i_num_clutsers];
-            i_new_membership[i][j] = new float[i_num_clutsers];
+            // i_new_membership[i][j] = new float[i_num_clutsers];
         }
         
     }
@@ -39,7 +39,7 @@ __host__ void init_membership() {
 
 }
 
-__host__ void init_centers() {
+__host__ void init_centers(float *i_cluster_centers) {
     i_cluster_centers = new float[i_num_clutsers];
 
     for (int i = 0; i < i_num_clutsers; ++i) {
@@ -65,7 +65,7 @@ __device__ float eucl_distance(float center, float val) {
     return sqrt(pow(val - center, 2));
 }
 
-__global__ void update_centers() {
+__global__ void update_centers_kernel(float **i_image, float ***i_membership) {
     float u_ij_m, x_u_ij_m;
 
     for (int k = 0; k < i_num_clutsers; ++k) {
@@ -91,8 +91,13 @@ __global__ void update_centers() {
 
 }
 
-__global__ float update_membership() {
-    float diff = 0.0;
+
+__host__ void update_centers() {
+
+}
+
+
+__global__ void update_membership_kernel(float ***i_membership) {
 
     // calculate degree of membership of each data point (image) regarding each cluster
     for (int i = 0; i < i_rows; ++i) {
@@ -120,11 +125,14 @@ __global__ float update_membership() {
 
     // print_mebership();
 
-    return diff;
+}
+
+__host__ update_membership() {
+
 }
 
 
-__global__ float calculate_membership_point(int i, int j, int k) {
+__device__ float calculate_membership_point_kernel(float **i_image, float *i_cluster_centers, int i, int j, int k) {
     float d_center, d_all, aggr = 0.0;
 
     d_center = eucl_distance(i_cluster_centers[k], i_image[i][j]);
@@ -142,13 +150,7 @@ __global__ float calculate_membership_point(int i, int j, int k) {
 }
 
 
-
-__device__ float calculate_new_old_u_dist() {
-    float diff = 0.0;
-    return diff;
-}
-
-__device__ void print_mebership() {
+__device__ void calculate_final_cluster_kernel(float ***i_membership, int **i_final_cluster) {
     cout << "Membership: " << endl;
     for (int i = 0; i < i_rows; ++i) {
         for (int j = 0; j < i_cols; ++j) {
@@ -165,5 +167,9 @@ __device__ void print_mebership() {
             // cout << endl;
         }
     }
+}
+
+__host__ calculate_final_cluster() {
+
 }
 
