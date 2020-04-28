@@ -59,7 +59,7 @@ int main( int argc, char** argv )
 
     float filter[9];
     
-    // omp_set_num_threads(atoi(argv[1]));
+    omp_set_num_threads(atoi(argv[1]));
 
     start = chrono::high_resolution_clock::now();
     generateGaussian(filter, 3, 1.0);
