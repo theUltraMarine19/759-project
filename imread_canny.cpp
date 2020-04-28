@@ -115,7 +115,7 @@ int main( int argc, char** argv )
     //     cout << endl;
     // }
 
-    hysteresis(norm_supp, image.rows, image.cols, 0.08, 0.11);
+    q_hysteresis(norm_supp, image.rows, image.cols, 0.08, 0.11);
 
     // for (int i = 0; i < norm_out.rows; i++) {
     //     for (int j = 0; j < 10; j++) {
@@ -134,7 +134,7 @@ int main( int argc, char** argv )
 
     Mat write_out;
     normalize(norm_out, write_out, 0, 255, NORM_MINMAX, CV_8U);
-    imwrite("canny1.png", write_out);
+    imwrite("canny3.png", write_out);
 
     delete[] temp;
     delete[] outputx;

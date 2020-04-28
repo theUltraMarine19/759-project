@@ -87,11 +87,11 @@ int main(int argc, char* argv[]) {
   	
   	// Can be improved with CUDA streams
   	cudaEventRecord(start);
-  	conv(dimg, dmaskx, outx, image.rows, image.cols, bdx, bdy);
-  	conv(dimg, dmasky, outy, image.rows, image.cols, bdx, bdy);
+  	// conv(dimg, dmaskx, outx, image.rows, image.cols, bdx, bdy);
+  	// conv(dimg, dmasky, outy, image.rows, image.cols, bdx, bdy);
 
-    // conv_opt(dimg, dmaskx1, dmaskx2, outx, image.rows, image.cols, bdx, bdy);
-    // conv_opt(dimg, dmaskx2, dmaskx1, outy, image.rows, image.cols, bdx, bdy);
+    conv_opt(dimg, dmaskx1, dmaskx2, outx, image.rows, image.cols, bdx, bdy);
+    conv_opt(dimg, dmaskx2, dmaskx1, outy, image.rows, image.cols, bdx, bdy);
      	
    	dim3 block(bdx, bdy);
   	dim3 grid((image.cols + block.x - 1) / block.x, (image.rows + block.y - 1) / block.y);
