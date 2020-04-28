@@ -50,7 +50,7 @@ __global__ void conv_kernel(const float* image, const float* mask, float* output
 	// }
 	
 
-	extern volatile __shared__ float arr[]; // preventing shmem data from being directly loaded onto registers
+	extern __shared__ float arr[]; // Can't use "volatile" to prevent shmem data from being directly loaded onto registers
 	float* img = &arr[0]; 									
 	float* msk = &arr[(bdx + 2) * (bdy + 2)]; 
 	float* out = &arr[(bdx + 2) * (bdy + 2) + 3*3]; 		 
@@ -176,7 +176,7 @@ __global__ void conv_kernel_horiz(const float* image, const float* mask, float* 
 	int bdy = blockDim.y, bdx = blockDim.x;
 	float avg_intensity = 0;
 
-	extern volatile __shared__ float arr[];		// preventing shmem data from being directly loaded onto registers
+	extern __shared__ float arr[];		// Can't use "volatile" to prevent shmem data from being directly loaded onto registers
 	float* img = &arr[0]; 									
 	float* msk = &arr[(bdx + 2) * bdy]; 
 	float* out = &arr[(bdx + 2) * bdy + 3]; 		 
@@ -231,7 +231,7 @@ __global__ void conv_kernel_vert(const float* image, const float* mask, float* o
 	int bdy = blockDim.y, bdx = blockDim.x;
 	float avg_intensity = 0;
 
-	extern volatile __shared__ float arr[];		// preventing shmem data from being directly loaded onto registers
+	extern __shared__ float arr[];		// Can't use "volatile" to prevent shmem data from being directly loaded onto registers
 	float* img = &arr[0]; 									
 	float* msk = &arr[(bdy + 2) * bdx]; 
 	float* out = &arr[(bdy + 2) * bdx + 3]; 		 
@@ -292,8 +292,8 @@ __host__ void conv(const float* image, const float* mask, float* output, unsigne
 	// 	cout << endl;
 	// }
 
-	// conv_kernel<<<grid, block, sizeof(float) * (bdx + 2) * (bdy + 2) + 3 * 3 * sizeof(float) + sizeof(float) * bdx * bdy>>>(image, mask, output, r, c);
-	conv_kernel_no_shmem<<<grid, block>>>(image, mask, output, r, c);
+	conv_kernel<<<grid, block, sizeof(float) * (bdx + 2) * (bdy + 2) + 3 * 3 * sizeof(float) + sizeof(float) * bdx * bdy>>>(image, mask, output, r, c);
+	// conv_kernel_no_shmem<<<grid, block>>>(image, mask, output, r, c);
 	
 	cudaError_t err;
 	// // Check for kernel launch errors

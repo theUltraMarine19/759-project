@@ -1,30 +1,37 @@
 #include <cmath>
 #include <cstdio>
 #include <iostream>
+
 #include "canny.cuh"
 using namespace std;
 
-__global__ void generateGaussian(float *filter, float* sum, float sigma) {
+
+
+__global__ void generateGaussian(float *filter, float* sigma) {
 	int x_idx = threadIdx.x + blockDim.x * blockIdx.x;
-	int y_idx = threadIdx.y + blockDim.y * blockDim.y;
+	int y_idx = threadIdx.y + blockDim.y * blockIdx.y;
 	int sz = blockDim.x; // always odd
 
-	volatile __shared__ float arr[]; // no otpimized loads to registers
-	float* deno = &arr[0]; 									
-	float* sum = &arr[(bdy + 2) * bdx];
+	__shared__ float arr[2]; // Can't use "volatile" to prevent shmem data from being directly loaded onto registers
+	// float deno = arr[0]; 									
+	// float sum = arr[1];
 
-	*deno = 2 * sigma * sigma; // memory transaction takes place immediately since volatile
+	if (threadIdx.x == 0 && threadIdx.y == 0) {
+		arr[1] = 0;
+		arr[0] = 2 * (*sigma) * (*sigma); // memory transaction takes place immediately since volatile 
+	}
 
-	filter[y_idx*sz + x_idx] = 1.0/( exp( ( (y_idx-sz/2) * (y_idx-sz/2) + (x_idx-sz/2)*(x_idx-sz/2) )/deno ) * (deno * M_PI) );
-	__syncthreads(); // wait for all threads to populate the filter values
+	__syncthreads(); // all should get the sum and deno values populated
 
+	filter[y_idx*sz + x_idx] = 1.0/( exp( ( (y_idx-sz/2) * (y_idx-sz/2) + (x_idx-sz/2)*(x_idx-sz/2) )/arr[0] ) * (arr[0] * M_PI) );
+	
 	/* Effectively serializing the next part of code. Hurts parallelism massively */
 
 	// Protection against all threads trying to modify this variable
-	atomicAdd(sum, filter[y_idx*sz + x_idx]); // memory transaction takes place immediately since volatile
+	atomicAdd(&arr[1], filter[y_idx*sz + x_idx]); // memory transaction takes place immediately since volatile
 	__syncthreads(); // wiat for all threads to have updated the "sum" variable
 
-	filter[y_idx*sz + x_idx] /= *sum;
+	filter[y_idx*sz + x_idx] /= arr[1];
 }
 
 __global__ void NonMaxSuppresion(float *grad, float* magn, float* supp, size_t r, size_t c) {
@@ -61,7 +68,7 @@ __global__ void NonMaxSuppresion(float *grad, float* magn, float* supp, size_t r
 __global__ void mag_grad(float *Gx, float *Gy, float *magn, float *grad, size_t r, size_t c) {
 	
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockDim.y;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
 	int idx = i*c+j;
 
 	// check for out of bounds
@@ -80,43 +87,43 @@ __global__ void mag_grad(float *Gx, float *Gy, float *magn, float *grad, size_t 
 
 }
 
-__global__ void hysteresis(float* supp, size_t r, size_t c, float low, float high) {
-		for (int i = 0; i < r; i++) {
-			for (int j = 0; j < c; j++) {
-				if (supp[i*c+j] > high) {
-					supp[i*c+j] = 1.0;
-					rec_hysteresis(supp, i, j, r, c, low, high);
-				}
-			}
-		}
+// __global__ void hysteresis(float* supp, size_t r, size_t c, float low, float high) {
+// 		for (int i = 0; i < r; i++) {
+// 			for (int j = 0; j < c; j++) {
+// 				if (supp[i*c+j] > high) {
+// 					supp[i*c+j] = 1.0;
+// 					rec_hysteresis(supp, i, j, r, c, low, high);
+// 				}
+// 			}
+// 		}
 	
-		#pragma omp for simd collapse(2)
-		for (int i = 0; i < r; i++) {
-			for (int j = 0; j < c; j++) {
-				if (supp[i*c+j] != 1.0) {
-					supp[i*c+j] = 0.0;
-				}
-			}
-		}
+// 		#pragma omp for simd collapse(2)
+// 		for (int i = 0; i < r; i++) {
+// 			for (int j = 0; j < c; j++) {
+// 				if (supp[i*c+j] != 1.0) {
+// 					supp[i*c+j] = 0.0;
+// 				}
+// 			}
+// 		}
 	
-}
+// }
 
-__global__ void rec_hysteresis(float *supp, size_t idxr, size_t idxc, size_t r, size_t c, float low, float high) {
-	for (int i = idxr-1; i <= idxr+1; i++) {
-		for (int j = idxc-1; j <= idxc+1; j++) {
-			if (i < 0 || j < 0 || i >= r || j >= c)
-				continue;
-			if (i != idxr && j != idxc) {
-				if (supp[i*c + j] != 1.0) {
-					if (supp[i*c+j] > low) {
-						supp[i*c+j] = 1.0;
-						rec_hysteresis(supp, i, j, r, c, low, high);
-					}
-					else {
-						supp[i*c+j] = 0.0;
-					}
-				}
-			}
-		}
-	}
-}
+// __global__ void rec_hysteresis(float *supp, size_t idxr, size_t idxc, size_t r, size_t c, float low, float high) {
+// 	for (int i = idxr-1; i <= idxr+1; i++) {
+// 		for (int j = idxc-1; j <= idxc+1; j++) {
+// 			if (i < 0 || j < 0 || i >= r || j >= c)
+// 				continue;
+// 			if (i != idxr && j != idxc) {
+// 				if (supp[i*c + j] != 1.0) {
+// 					if (supp[i*c+j] > low) {
+// 						supp[i*c+j] = 1.0;
+// 						rec_hysteresis(supp, i, j, r, c, low, high);
+// 					}
+// 					else {
+// 						supp[i*c+j] = 0.0;
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+// }
