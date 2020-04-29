@@ -124,13 +124,15 @@ int main(int argc, char* argv[]) {
 	// q_init<<<grid, block>>>(supp, 0.11, queue, back, image.rows, image.cols, mutex);
 	// err = cudaDeviceSynchronize();
 
+    // cudaEventRecord(start);
+
     do {
 
 		*ctr = 0;
 		hysteresis<<<grid, block>>>(supp, image.rows, image.cols, 0.08, 0.11, ctr);
         // hysteresis<8, 11><<<grid, block>>>(supp, image.rows, image.cols, ctr);
 		err = cudaDeviceSynchronize();
-		cout << *ctr << endl;
+		// cout << *ctr << endl;
 	
 	} while (*ctr != 0);
 	

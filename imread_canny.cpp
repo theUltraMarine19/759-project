@@ -114,8 +114,9 @@ int main( int argc, char** argv )
     //     }
     //     cout << endl;
     // }
-
-    q_hysteresis(norm_supp, image.rows, image.cols, 0.08, 0.11);
+    // start = chrono::high_resolution_clock::now();
+    
+    hysteresis(norm_supp, image.rows, image.cols, 0.08, 0.11);
 
     // for (int i = 0; i < norm_out.rows; i++) {
     //     for (int j = 0; j < 10; j++) {

@@ -280,6 +280,61 @@ __global__ void conv_kernel_vert(const float* image, const float* mask, float* o
 
 }
 
+__global__ void conv_kernel_vert_opt(const float* image, const float* mask, float* output, unsigned int r, unsigned int c) {
+	int tidx = threadIdx.x, tidy = threadIdx.y;
+	int bidx = blockIdx.x, bidy = blockIdx.y;
+	int bdy = blockDim.y, bdx = blockDim.x;
+	float avg_intensity = 0;
+
+	extern __shared__ float arr[];		// Can't use "volatile" to prevent shmem data from being directly loaded onto registers
+	float* img = &arr[0]; 									
+	float* msk = &arr[(bdy + 2) * bdx]; 
+	float* out = &arr[(bdy + 2) * bdx + 3]; 		 
+
+	long x_idx = tidx + (long)bdx * (long)bidx; 		// long since can be > 2^31 -1
+	long y_idx = tidy + (long)bdy * (long)bidy;
+
+	// load image elements in-place
+	if (x_idx < c && y_idx < r)
+		img[(tidy+1) + tidx*(bdy+2)] = image[y_idx * c + x_idx];
+	else
+		img[(tidy+1) + tidx*(bdy+2)] = avg_intensity;
+
+	// load the mask into shmem
+	if (tidx == 0 && tidx < 3)
+		msk[tidy] = mask[tidy];
+
+	if (tidy == 0) { // top row
+		
+		if (y_idx >= 1)
+			img[tidy + tidx*(bdy+2)] = image[(y_idx-1)*c + x_idx];
+		else
+			img[tidy + tidx*(bdy+2)] = avg_intensity;
+	
+	}
+	else if (tidy == bdy - 1) { // bottom row
+	
+		if (y_idx < r-1)
+			img[(tidy+2) + tidx*(bdy+2)] = image[(y_idx+1)*c + x_idx];
+		else
+			img[(tidy+2) + tidx*(bdy+2)] = avg_intensity;
+	
+	}
+
+	__syncthreads();
+
+	out[tidy+tidx*bdy] = 0;
+	for (int i = 0; i < 3; i++) {
+		out[tidy+tidx*bdy] += img[(tidy+i) + tidx*(bdy+2)] * msk[i];	
+	}	
+
+	__syncthreads();
+
+	if (x_idx < c && y_idx < r)
+		output[y_idx*c+x_idx] = out[tidy+tidx*bdy];
+
+}
+
 __host__ void conv(const float* image, const float* mask, float* output, unsigned int r, unsigned int c, unsigned int bdx, unsigned int bdy) {
 
 	dim3 block(bdx, bdy);
@@ -322,7 +377,7 @@ __host__ void conv_opt(const float* image, const float* mask1, float* mask2, flo
 	err = cudaDeviceSynchronize();
   	// cout << cudaGetErrorName(err) << endl;
 	
-	conv_kernel_vert<<<grid, block, sizeof(float) * (bdy+2) * bdx + 3 * sizeof(float) + sizeof(float) * bdx * bdy>>>(temp, mask2, output, r, c);
+	conv_kernel_vert_opt<<<grid, block, sizeof(float) * (bdy+2) * bdx + 3 * sizeof(float) + sizeof(float) * bdx * bdy>>>(temp, mask2, output, r, c);
 	err = cudaDeviceSynchronize();
   	// cout << cudaGetErrorName(err) << endl;
 
