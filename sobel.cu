@@ -303,7 +303,7 @@ __host__ void conv(const float* image, const float* mask, float* output, unsigne
   	
 
   	err = cudaDeviceSynchronize();
-  	cout << cudaGetErrorName(err) << endl;
+  	// cout << cudaGetErrorName(err) << endl;
   	
 }
 
@@ -320,11 +320,11 @@ __host__ void conv_opt(const float* image, const float* mask1, float* mask2, flo
 	
 	conv_kernel_horiz<<<grid, block, sizeof(float) * bdy * (bdx+2) + 3 * sizeof(float) + sizeof(float) * bdx * bdy>>>(image, mask1, temp, r, c);
 	err = cudaDeviceSynchronize();
-  	cout << cudaGetErrorName(err) << endl;
+  	// cout << cudaGetErrorName(err) << endl;
 	
 	conv_kernel_vert<<<grid, block, sizeof(float) * (bdy+2) * bdx + 3 * sizeof(float) + sizeof(float) * bdx * bdy>>>(temp, mask2, output, r, c);
 	err = cudaDeviceSynchronize();
-  	cout << cudaGetErrorName(err) << endl;
+  	// cout << cudaGetErrorName(err) << endl;
 
   	err = cudaFree(temp);
   	// cout << cudaGetErrorName(err) << endl;

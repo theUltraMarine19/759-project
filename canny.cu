@@ -7,18 +7,18 @@ using namespace std;
 
 
 
-__global__ void generateGaussian(float *filter, float* sigma) {
+__global__ void generateGaussian(float *filter, float sigma) {
 	int x_idx = threadIdx.x + blockDim.x * blockIdx.x;
 	int y_idx = threadIdx.y + blockDim.y * blockIdx.y;
 	int sz = blockDim.x; // always odd
 
-	__shared__ float arr[2]; // Can't use "volatile" to prevent shmem data from being directly loaded onto registers
+	volatile __shared__ float arr[2]; // Can't use "volatile" to prevent shmem data from being directly loaded onto registers
 	// float deno = arr[0]; 									
 	// float sum = arr[1];
 
 	if (threadIdx.x == 0 && threadIdx.y == 0) {
 		arr[1] = 0;
-		arr[0] = 2 * (*sigma) * (*sigma); // memory transaction takes place immediately since volatile 
+		arr[0] = 2 * sigma * sigma; // memory transaction takes place immediately since volatile 
 	}
 
 	__syncthreads(); // all should get the sum and deno values populated
@@ -28,38 +28,46 @@ __global__ void generateGaussian(float *filter, float* sigma) {
 	/* Effectively serializing the next part of code. Hurts parallelism massively */
 
 	// Protection against all threads trying to modify this variable
-	atomicAdd(&arr[1], filter[y_idx*sz + x_idx]); // memory transaction takes place immediately since volatile
+	atomicAdd((int*)&arr[1], filter[y_idx*sz + x_idx]); // memory transaction takes place immediately since volatile
 	__syncthreads(); // wiat for all threads to have updated the "sum" variable
 
 	filter[y_idx*sz + x_idx] /= arr[1];
 }
 
-__global__ void NonMaxSuppresion(float *grad, float* magn, float* supp, size_t r, size_t c) {
+__global__ void NonMaxSuppression(float *grad, float* magn, float* supp, size_t r, size_t c) {
 	
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
-	int i = threadIdx.y + blockDim.y * blockDim.y;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
 	int idx = i*c+j; // code motion
 
 	// check for out of bounds
-	if (j < c && i < r) {
+	if (i > 0 && j > 0 && j < c-1 && i < r-1) {
 
 		float angle = grad[idx];
-
-		if ((-22.5 <= angle && angle <= 22.5) || (157.5 <= angle && angle <= -157.5))
+		
+		if ((-22.5 < angle && angle <= 22.5) || (157.5 < angle && angle <= -157.5)) {
+			// printf("%f %f %f\n", magn[idx], magn[idx-1], magn[idx+1]);
 			if (magn[idx] < magn[idx+1] || magn[idx] < magn[idx-1])
 				supp[idx] = 0.0;
+		}
 
-		if ((-112.5 <= angle && angle <= -67.5) || (67.5 <= angle && angle <= 112.5))
+		if ((-112.5 < angle && angle <= -67.5) || (67.5 < angle && angle <= 112.5)) {
+			// printf("%f %f %f\n", magn[idx], magn[idx-c], magn[idx+c]);
 			if (magn[idx] < magn[idx+c] || magn[idx] < magn[idx-c])
 				supp[idx] = 0.0;
+		}
 
-		if ((-67.5 <= angle && angle <= -22.5) || (112.5 <= angle && angle <= 157.5))
+		if ((-67.5 < angle && angle <= -22.5) || (112.5 < angle && angle <= 157.5)) {
+			// printf("%f %f %f\n", magn[idx], magn[idx-c+1], magn[idx+c-1]);
 			if (magn[idx] < magn[idx-c+1] || magn[idx] < magn[idx+c-1])
 				supp[idx] = 0.0;
+		}
 
-		if ((-157.5 <= angle && angle <= -112.5) || (22.5 <= angle && angle <= 67.5))
+		if ((-157.5 < angle && angle <= -112.5) || (22.5 < angle && angle <= 67.5)) {
+			// printf("%f %f %f\n", magn[idx], magn[idx+c+1], magn[idx-c-1]);
 			if (magn[idx] < magn[idx+c+1] || magn[idx] < magn[idx-c-1])
 				supp[idx] = 0.0;
+		}
 
 	}
 
@@ -87,43 +95,112 @@ __global__ void mag_grad(float *Gx, float *Gy, float *magn, float *grad, size_t 
 
 }
 
-// __global__ void hysteresis(float* supp, size_t r, size_t c, float low, float high) {
-// 		for (int i = 0; i < r; i++) {
-// 			for (int j = 0; j < c; j++) {
-// 				if (supp[i*c+j] > high) {
-// 					supp[i*c+j] = 1.0;
-// 					rec_hysteresis(supp, i, j, r, c, low, high);
-// 				}
-// 			}
-// 		}
-	
-// 		#pragma omp for simd collapse(2)
-// 		for (int i = 0; i < r; i++) {
-// 			for (int j = 0; j < c; j++) {
-// 				if (supp[i*c+j] != 1.0) {
-// 					supp[i*c+j] = 0.0;
-// 				}
-// 			}
-// 		}
-	
-// }
+__device__ void lock(volatile int *mutex) { // spinlock
+	while (atomicCAS((int*)mutex, 0, 1) != 0);
+	// other threads in the warp keep spinning, so thread in critical section can't be scheduled to release mutesx. Warp-level semantics
+}
 
-// __global__ void rec_hysteresis(float *supp, size_t idxr, size_t idxc, size_t r, size_t c, float low, float high) {
-// 	for (int i = idxr-1; i <= idxr+1; i++) {
-// 		for (int j = idxc-1; j <= idxc+1; j++) {
-// 			if (i < 0 || j < 0 || i >= r || j >= c)
-// 				continue;
-// 			if (i != idxr && j != idxc) {
-// 				if (supp[i*c + j] != 1.0) {
-// 					if (supp[i*c+j] > low) {
-// 						supp[i*c+j] = 1.0;
-// 						rec_hysteresis(supp, i, j, r, c, low, high);
-// 					}
-// 					else {
-// 						supp[i*c+j] = 0.0;
-// 					}
-// 				}
-// 			}
-// 		}
-// 	}
-// }
+__device__ void unlock(volatile int *mutex) {
+	atomicExch((int*)mutex, 0);
+}
+
+
+__global__ void q_init(float* supp, float high, float *q, int *back, size_t r, size_t c, int* mutex) {
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+	int idx = i*c+j;
+
+	__shared__ int arr[1];
+
+	if (i == 0 && j == 0) {
+		arr[0] = *back;
+	}
+
+	__syncthreads();
+
+	if (i < r && j < c && supp[idx] > high) {
+		supp[idx] = 1.0;
+
+		lock(mutex);
+		// push {i,j} into queue if its value > high
+		q[arr[0]] = i;
+		q[arr[0] + 1] = j;
+		
+		printf("Value of back is %d from idx %d %d\n", arr[0], i, j);
+		arr[0] += 2;
+
+		unlock(mutex);
+	}
+}
+
+__global__ void hysteresis(float* supp, size_t r, size_t c, float low, float high, int* ctr) {
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+	int idx = i*c+j;
+
+	volatile __shared__ int arr[1];
+	if (threadIdx.x == 0 && threadIdx.y == 0)
+		arr[0] = *ctr;
+
+	if (i < r && j < c) {
+		if (supp[idx] > high) {
+			supp[idx] = 1.0;
+
+			// unroll loops
+			if (i+1 < r && j+1 < c && supp[(i+1)*c+(j+1)] > low && supp[(i+1)*c+(j+1)] != 1.0) { // southeast
+				supp[(i+1)*c+(j+1)] = 1.0;
+				atomicAdd((int*)&arr[0], 1);
+			}
+			
+			if (j+1 < c && supp[i*c+(j+1)] > low && supp[i*c+(j+1)] != 1.0) {	// east
+				supp[i*c+(j+1)] = 1.0;
+				atomicAdd((int*)&arr[0], 1);
+			}
+			
+			if (i+1 < r && supp[(i+1)*c+j] > low && supp[(i+1)*c+j] != 1.0) {	// south 
+				supp[(i+1)*c+j] = 1.0;
+				atomicAdd((int*)&arr[0], 1);
+			}
+
+			if (i-1 >= 0 && supp[(i-1)*c+j] > low && supp[(i-1)*c+j] != 1.0) { // north
+				supp[(i-1)*c+j] = 1.0;
+				atomicAdd((int*)&arr[0], 1);
+			}
+
+			if (j-1 >= 0 && supp[i*c+(j-1)] > low && supp[i*c+(j-1)] != 1.0) { // west
+				supp[i*c+(j-1)] = 1.0;
+				atomicAdd((int*)&arr[0], 1);
+			}
+
+			if (i+1 < r && j-1 >= 0 && supp[(i+1)*c+(j-1)] > low && supp[(i+1)*c+(j-1)] != 1.0) { // southwest 
+				supp[(i+1)*c+(j-1)] = 1.0;
+				atomicAdd((int*)&arr[0], 1);
+			}
+
+			if (i-1 >= 0 && j+1 < c && supp[(i-1)*c+(j+1)] > low && supp[(i-1)*c+(j+1)] != 1.0) { // northeast 
+				supp[(i-1)*c+(j+1)] = 1.0;
+				atomicAdd((int*)&arr[0], 1);
+			}
+
+			if (i-1 >= 0 && j-1 >= 0 && supp[(i-1)*c+(j-1)] > low && supp[(i-1)*c+(j-1)] != 1.0) { // northwest 
+				supp[(i-1)*c+(j-1)] = 1.0;
+				atomicAdd((int*)&arr[0], 1);
+			}
+
+		}
+	}
+
+	__syncthreads(); // need all other threads in warp to increment arr[0] to get correct value of *ctr
+	if (threadIdx.x == 0 && threadIdx.y == 0) 
+		*ctr = arr[0];
+}
+				
+__global__ void weak_disconnected_edge_removal(float* supp, size_t r, size_t c) {
+	int j = threadIdx.x + blockDim.x * blockIdx.x;
+	int i = threadIdx.y + blockDim.y * blockIdx.y;
+	int idx = i*c+j;
+
+	if (j < c && i < r)
+		supp[idx] = (supp[idx] != 1.0) * 0.0 + (supp[idx] == 1.0) * supp[idx];
+
+}

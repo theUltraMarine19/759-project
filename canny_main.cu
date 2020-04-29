@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
     image = imread("license.jpg", 0); 	
     if(image.empty())                   
     {
-        cout <<  "Could not open or find the image" << std::endl ;
+        cout <<  "Could not open or find the image" << endl;
         return -1;
     }
     
@@ -39,22 +39,18 @@ int main(int argc, char* argv[]) {
     float maskx1[3] = {1, 0, -1};
     float maskx2[3] = {1, 2, 1};
 
-    // float masky1[3] = {1, 2, 1};
-    // float masky2[3] = {1, 0, -1};
-
-    float *filter, *sigma, *dimg, *outx, *outy, *output;
+    float *filter, *dimg, *supp, *outx, *outy, *output;
     
     err = cudaMalloc((void **)&dimg, image.rows * image.cols * sizeof(float));
+    err = cudaMallocManaged((void **)&supp, image.rows * image.cols * sizeof(float));
 	err = cudaMallocManaged((void **)&filter, 3 * 3 * sizeof(float));
-    err = cudaMallocManaged((void **)&sigma, sizeof(float));
-
+    
     float *smooth_img, *grad;
     err = cudaMallocManaged((void **)&smooth_img, image.rows * image.cols * sizeof(float));
     err = cudaMallocManaged((void **)&grad, image.rows * image.cols * sizeof(float));
 
     err = cudaMemcpy(dimg, norm_image.ptr<float>(), image.rows * image.cols * sizeof(float), cudaMemcpyHostToDevice);
-    // cout << cudaGetErrorName(err) << endl;
-
+    
     err = cudaMallocManaged((void **)&outx, image.rows * image.cols * sizeof(float));
   	err = cudaMallocManaged((void **)&outy, image.rows * image.cols * sizeof(float));
   	err = cudaMallocManaged((void **)&output, image.rows * image.cols * sizeof(float));
@@ -69,36 +65,45 @@ int main(int argc, char* argv[]) {
   	err = cudaMemcpy(dmasky, masky, 9 * sizeof(float), cudaMemcpyHostToDevice);
   	err = cudaMemcpy(dmaskx1, maskx1, 3 * sizeof(float), cudaMemcpyHostToDevice);
   	err = cudaMemcpy(dmaskx2, maskx2, 3 * sizeof(float), cudaMemcpyHostToDevice);
-  	
-  	// Can be improved with CUDA streams
+
+  	// // Declare a queue for BFS
+  	// float *queue;
+  	// err = cudaMalloc((void**)&queue, 2 * image.rows * image.cols * sizeof(float));
+  	// int *front, *back;
+  	// err = cudaMallocManaged((void**)&front, sizeof(int));
+  	// err = cudaMallocManaged((void**)&back, sizeof(int));
+  	// *front = 0, *back = 0;
+
+	// // Lock
+	// int *mutex;
+	// int state = 0; // unlocked
+	// cudaMalloc((void **)&mutex, sizeof(int));
+	// cudaMemcpy(mutex, &state, sizeof(int), cudaMemcpyHostToDevice);
+
+  	int* ctr;
+	cudaMallocManaged((void **)&ctr, sizeof(int));
+	cudaMemset(ctr, 0, sizeof(int));  	
+
   	cudaEventRecord(start);
 
-    *sigma = 1.0;
     dim3 block(3, 3);
     dim3 grid(1, 1);
-    generateGaussian<<<grid, block>>>(filter, sigma);
+    generateGaussian<<<grid, block>>>(filter, 1.0);
     err = cudaDeviceSynchronize();
-    cout << cudaGetErrorName(err) << endl;
-
-    // for (int i = 0; i < 9; i++)
-    // 	cout << filter[i] << " ";
-    // cout << endl;
-
+    
+    
     conv(dimg, filter, smooth_img, image.rows, image.cols, bdx, bdy);
     err = cudaDeviceSynchronize();
-    // cout << cudaGetErrorName(err) << endl;
     
     Mat smoothed = Mat(image.rows, image.cols, CV_32F, smooth_img);
     Mat norm_smoothed;
     normalize(smoothed, norm_smoothed, 0, 1, NORM_MINMAX, CV_32F);
     err = cudaFree(smooth_img);
-    // cout << cudaGetErrorName(err) << endl;
     
     smooth_img = norm_smoothed.ptr<float>(0);
 
     err = cudaMemcpy(dimg, norm_smoothed.ptr<float>(), image.rows * image.cols * sizeof(float), cudaMemcpyHostToDevice);
-    cout << cudaGetErrorName(err) << endl;
-
+    
     conv_opt(dimg, dmaskx1, dmaskx2, outx, image.rows, image.cols, bdx, bdy);
     conv_opt(dimg, dmaskx2, dmaskx1, outy, image.rows, image.cols, bdx, bdy);
 
@@ -106,19 +111,49 @@ int main(int argc, char* argv[]) {
   	grid.x = (image.cols + block.x - 1) / block.x; grid.y = (image.rows + block.y - 1) / block.y;
     mag_grad<<<grid, block>>>(outx, outy, output, grad, image.rows, image.cols);
     err = cudaDeviceSynchronize();
-  	// cout << cudaGetErrorName(err) << endl;
   	
+    Mat mag = Mat(image.rows, image.cols, CV_32F, output);
+    Mat norm_mag;
+    normalize(mag, norm_mag, 0, 1, NORM_MINMAX, CV_32F);
+    cudaFree(output);
+    output = norm_mag.ptr<float>(0);
+
+	err = cudaMemcpy(dimg, norm_mag.ptr<float>(), image.rows * image.cols * sizeof(float), cudaMemcpyHostToDevice);
+    err = cudaMemcpy(supp, norm_mag.ptr<float>(), image.rows * image.cols * sizeof(float), cudaMemcpyHostToDevice);
+    // cout << cudaGetErrorName(err) << endl;
+
+	NonMaxSuppression<<<grid, block>>>(grad, dimg, supp, image.rows, image.cols);
+    err = cudaDeviceSynchronize();
+  	// cout << cudaGetErrorName(err) << endl;
+
+	// q_init<<<grid, block>>>(supp, 0.11, queue, back, image.rows, image.cols, mutex);
+	// err = cudaDeviceSynchronize();
+
+	do {
+
+		*ctr = 0;
+		hysteresis<<<grid, block>>>(supp, image.rows, image.cols, 0.08, 0.11, ctr);
+		err = cudaDeviceSynchronize();
+		cout << *ctr << endl;
+		// cout << cudaGetErrorName(err) << endl;
+	} while (*ctr != 0);
+	
+	
+	weak_disconnected_edge_removal<<<grid, block>>>(supp, image.rows, image.cols);
+	err = cudaDeviceSynchronize(); 
+	// cout << cudaGetErrorName(err) << endl; 	
+
   	cudaEventRecord(stop);
   	cudaEventSynchronize(stop);
 
   	float ms;
   	cudaEventElapsedTime(&ms, start, stop);
 
-  	Mat out = Mat(image.rows, image.cols, CV_32F, output);
+  	Mat out = Mat(image.rows, image.cols, CV_32F, supp);
     Mat norm_out;
     normalize(out, norm_out, 0, 1, NORM_MINMAX, CV_32F);
 
-  	// cout << ms << endl;
+  	cout << ms << endl;
 
 	Mat write_out;
 	normalize(norm_out, write_out, 0, 255, NORM_MINMAX, CV_8U);
@@ -126,7 +161,6 @@ int main(int argc, char* argv[]) {
 
 	err = cudaFree(dimg);
   	err = cudaFree(filter);
-    err = cudaFree(sigma);
     err = cudaFree(grad);
   	err = cudaFree(outx);
   	err = cudaFree(outy);
@@ -135,8 +169,10 @@ int main(int argc, char* argv[]) {
   	err = cudaFree(dmasky);
   	err = cudaFree(dmaskx1);
   	err = cudaFree(dmaskx2);
+  	err = cudaFree(supp);
+	// err = cudaFree(mutex);
   	
-  	cout << "Done!\n";
+  	// cout << "Done!\n";
   	
   	return 0;
 }
