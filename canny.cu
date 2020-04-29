@@ -38,34 +38,117 @@ __global__ void NonMaxSuppression(float *grad, float* magn, float* supp, size_t 
 	
 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
+	int bdx = blockDim.x, bdy = blockDim.y;
 	int idx = i*c+j; // code motion
+	int tidx = threadIdx.x, tidy = threadIdx.y;
+	float avg_intensity = 0.0;
+
+	extern __shared__ float img[]; // Can't use "volatile" to prevent shmem data from being directly loaded onto registers
+
+	// load image elements in-place
+	if (j < c && i < r)
+		img[(tidy+1)*(bdx+2) + tidx+1] = magn[idx];
+	else
+		img[(tidy+1)*(bdx+2) + tidx+1] = avg_intensity;
+
+	
+	if (tidx == 0 && tidy == 0) { // leftmost top corner
+		
+		if (j >= 1 && i >= 1)
+			img[tidy*(bdx+2) + tidx] = magn[idx-c-1];
+		else
+			img[tidy*(bdx+2) + tidx] = avg_intensity;
+
+	}
+	else if (tidx == 0 && tidy == bdy - 1) { // leftmost bottom corner
+		
+		if (j >= 1 && i < r-1)
+			img[(tidy+2)*(bdx+2) + tidx] = magn[idx+c-1];
+		else
+			img[(tidy+2)*(bdx+2) + tidx] = avg_intensity;		
+	
+	}
+	else if (tidx == bdx - 1 && tidy == 0) { // rightmost top corner
+		
+		if (j < c -1 && i >= 1)
+			img[tidy*(bdx+2) + tidx+2] = magn[idx-c+1];
+		else
+			img[tidy*(bdx+2) + tidx+2] = avg_intensity;
+
+	}
+	else if (tidx == bdx - 1 && tidy == bdy -1) { // rightmost bottom corner
+		
+		if (j < c -1 && i < r-1)
+			img[(tidy+2)*(bdx+2) + tidx+2] = magn[idx+c+1];
+		else
+			img[(tidy+2)*(bdx+2) + tidx+2] = avg_intensity;
+	
+	}
+
+
+	if (tidx == 0) { // leftmost col
+		
+		if (j >= 1)
+			img[(tidy+1)*(bdx+2) + tidx] = magn[idx-1];
+		else
+			img[(tidy+1)*(bdx+2) + tidx] = avg_intensity;
+	
+	}
+	else if (tidx == bdx - 1) { // rightmost col
+		
+		if (j < c-1)
+			img[(tidy+1)*(bdx+2) + tidx+2] = magn[idx+1];
+		else
+			img[(tidy+1)*(bdx+2) + tidx+2] = avg_intensity;
+	
+	}
+	
+	if (tidy == 0) { // top row
+		
+		if (i >= 1)
+			img[tidy*(bdx+2) + tidx+1] = magn[idx-c];
+		else
+			img[tidy*(bdx+2) + tidx+1] = avg_intensity;
+	
+	}
+	else if (tidy == bdy - 1) { // bottom row
+	
+		if (i < r-1)
+			img[(tidy+2)*(bdx+2) + tidx+1] = magn[idx+c];
+		else
+			img[(tidy+2)*(bdx+2) + tidx+1] = avg_intensity;
+	
+	}
+
+	__syncthreads();
 
 	// check for out of bounds
 	if (i > 0 && j > 0 && j < c-1 && i < r-1) {
 
 		float angle = grad[idx];
+		int idx1 = (tidy+1)*(bdx+2) + tidx+1;
 		
 		if ((-22.5 < angle && angle <= 22.5) || (157.5 < angle && angle <= -157.5)) {
-			// printf("%f %f %f\n", magn[idx], magn[idx-1], magn[idx+1]);
-			if (magn[idx] < magn[idx+1] || magn[idx] < magn[idx-1])
+			// printf("%f %f %f\n", img[idx1], img[idx1-1], img[idx1+1]);
+			if (img[idx1] < img[idx1+1] || img[idx1] < img[idx1-1])
 				supp[idx] = 0.0;
 		}
 
 		if ((-112.5 < angle && angle <= -67.5) || (67.5 < angle && angle <= 112.5)) {
-			// printf("%f %f %f\n", magn[idx], magn[idx-c], magn[idx+c]);
-			if (magn[idx] < magn[idx+c] || magn[idx] < magn[idx-c])
+			// printf("%f %f %f\n", img[idx1], img[idx1-c], img[idx1+c]);
+			if (img[idx1] < img[idx1+(bdx+2)] || img[idx1] < img[idx1-(bdx+2)])
 				supp[idx] = 0.0;
 		}
 
 		if ((-67.5 < angle && angle <= -22.5) || (112.5 < angle && angle <= 157.5)) {
-			// printf("%f %f %f\n", magn[idx], magn[idx-c+1], magn[idx+c-1]);
-			if (magn[idx] < magn[idx-c+1] || magn[idx] < magn[idx+c-1])
+			// printf("%f %f %f\n", img[idx1], img[idx1-c+1], img[idx1+c-1]);
+			if (img[idx1] < img[idx1-(bdx+2)+1] || img[idx1] < img[idx1+(bdx+2)-1])
 				supp[idx] = 0.0;
 		}
 
 		if ((-157.5 < angle && angle <= -112.5) || (22.5 < angle && angle <= 67.5)) {
-			// printf("%f %f %f\n", magn[idx], magn[idx+c+1], magn[idx-c-1]);
-			if (magn[idx] < magn[idx+c+1] || magn[idx] < magn[idx-c-1])
+			// printf("%f %f %f\n", img[idx1], img[idx1+c+1], img[idx1-c-1]);
+			if (img[idx1] < img[idx1+(bdx+2)+1] || img[idx1] < img[idx1-(bdx+2)-1])
 				supp[idx] = 0.0;
 		}
 
@@ -138,7 +221,7 @@ __global__ void hysteresis(float* supp, size_t r, size_t c, float low, float hig
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 	int idx = i*c+j;
 
-	__shared__ int arr[1];
+	volatile __shared__ int arr[1];
 	if (threadIdx.x == 0 && threadIdx.y == 0)
 		arr[0] = *ctr;
 
@@ -151,42 +234,42 @@ __global__ void hysteresis(float* supp, size_t r, size_t c, float low, float hig
 			// unroll loops
 			if (i+1 < r && j+1 < c && supp[(i+1)*c+(j+1)] > low && supp[(i+1)*c+(j+1)] != 1.0) { // southeast
 				supp[(i+1)*c+(j+1)] = 1.0;
-				atomicAdd(&arr[0], 1);
+				atomicAdd((int*)&arr[0], 1);
 			}
 			
 			if (j+1 < c && supp[i*c+(j+1)] > low && supp[i*c+(j+1)] != 1.0) {	// east
 				supp[i*c+(j+1)] = 1.0;
-				atomicAdd(&arr[0], 1);
+				atomicAdd((int*)&arr[0], 1);
 			}
 			
 			if (i+1 < r && supp[(i+1)*c+j] > low && supp[(i+1)*c+j] != 1.0) {	// south 
 				supp[(i+1)*c+j] = 1.0;
-				atomicAdd(&arr[0], 1);
+				atomicAdd((int*)&arr[0], 1);
 			}
 
 			if (i-1 >= 0 && supp[(i-1)*c+j] > low && supp[(i-1)*c+j] != 1.0) { // north
 				supp[(i-1)*c+j] = 1.0;
-				atomicAdd(&arr[0], 1);
+				atomicAdd((int*)&arr[0], 1);
 			}
 
 			if (j-1 >= 0 && supp[i*c+(j-1)] > low && supp[i*c+(j-1)] != 1.0) { // west
 				supp[i*c+(j-1)] = 1.0;
-				atomicAdd(&arr[0], 1);
+				atomicAdd((int*)&arr[0], 1);
 			}
 
 			if (i+1 < r && j-1 >= 0 && supp[(i+1)*c+(j-1)] > low && supp[(i+1)*c+(j-1)] != 1.0) { // southwest 
 				supp[(i+1)*c+(j-1)] = 1.0;
-				atomicAdd(&arr[0], 1);
+				atomicAdd((int*)&arr[0], 1);
 			}
 
 			if (i-1 >= 0 && j+1 < c && supp[(i-1)*c+(j+1)] > low && supp[(i-1)*c+(j+1)] != 1.0) { // northeast 
 				supp[(i-1)*c+(j+1)] = 1.0;
-				atomicAdd(&arr[0], 1);
+				atomicAdd((int*)&arr[0], 1);
 			}
 
 			if (i-1 >= 0 && j-1 >= 0 && supp[(i-1)*c+(j-1)] > low && supp[(i-1)*c+(j-1)] != 1.0) { // northwest 
 				supp[(i-1)*c+(j-1)] = 1.0;
-				atomicAdd(&arr[0], 1);
+				atomicAdd((int*)&arr[0], 1);
 			}
 
 		}

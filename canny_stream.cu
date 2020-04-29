@@ -143,9 +143,11 @@ int main(int argc, char* argv[]) {
 	err = cudaMemcpy(dimg, norm_mag.ptr<float>(), image.rows * image.cols * sizeof(float), cudaMemcpyHostToDevice);
 	err = cudaMemcpy(doutput, dimg, image.rows * image.cols * sizeof(float), cudaMemcpyDeviceToDevice);
     
-	NonMaxSuppression<<<grid, block, 0, stream0>>>(dgrad, dimg, doutput, image.rows, image.cols);
+	NonMaxSuppression<<<grid, block, (bdx+2)*(bdy+2)*sizeof(float), stream0>>>(dgrad, dimg, doutput, image.rows, image.cols);
     err = cudaDeviceSynchronize();
   	
+    // err = cudaMemcpy(houtput, doutput, image.rows * image.cols * sizeof(float), cudaMemcpyDeviceToHost);
+
   	do {
 
 		*ctr = 0;

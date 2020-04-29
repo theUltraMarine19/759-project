@@ -134,7 +134,7 @@ int main( int argc, char** argv )
 
     Mat write_out;
     normalize(norm_out, write_out, 0, 255, NORM_MINMAX, CV_8U);
-    imwrite("canny2.png", write_out);
+    imwrite("canny1.png", write_out);
 
     delete[] temp;
     delete[] outputx;

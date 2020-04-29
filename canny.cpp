@@ -1,4 +1,4 @@
-[200~#include <cmath>
+#include <cmath>
 #include <iostream>
 #include <cstdio>
 #include <omp.h>

@@ -121,13 +121,14 @@ int main(int argc, char* argv[]) {
 	err = cudaMemcpy(dimg, norm_mag.ptr<float>(), image.rows * image.cols * sizeof(float), cudaMemcpyHostToDevice);
     err = cudaMemcpy(supp, norm_mag.ptr<float>(), image.rows * image.cols * sizeof(float), cudaMemcpyHostToDevice);
     
-	NonMaxSuppression<<<grid, block>>>(grad, dimg, supp, image.rows, image.cols);
+	NonMaxSuppression<<<grid, block, (bdx+2)*(bdy+2)*sizeof(float)>>>(grad, dimg, supp, image.rows, image.cols);
     err = cudaDeviceSynchronize();
-  	
+  	cout << cudaGetErrorName(err) << endl;
+
 	// q_init<<<grid, block>>>(supp, 0.11, queue, back, image.rows, image.cols, mutex);
 	// err = cudaDeviceSynchronize();
 
-	do {
+    do {
 
 		*ctr = 0;
 		hysteresis<<<grid, block>>>(supp, image.rows, image.cols, 0.08, 0.11, ctr);
@@ -154,7 +155,7 @@ int main(int argc, char* argv[]) {
 
 	Mat write_out;
 	normalize(norm_out, write_out, 0, 255, NORM_MINMAX, CV_8U);
-	imwrite("canny1_CUDA.png", write_out);
+	imwrite("canny2_CUDA.png", write_out);
 
 	err = cudaFree(dimg);
   	err = cudaFree(filter);
