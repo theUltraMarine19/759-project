@@ -5,8 +5,8 @@
 #include "canny.cuh"
 using namespace std;
 
-
-__global__ void generateGaussian(float *filter, float sigma) {
+// __global__ functions can't be inlined actually
+__forceinline__ __global__ void generateGaussian(float *filter, float sigma) {
 	int x_idx = threadIdx.x + blockDim.x * blockIdx.x;
 	int y_idx = threadIdx.y + blockDim.y * blockIdx.y;
 	int sz = blockDim.x; // always odd
@@ -33,8 +33,10 @@ __global__ void generateGaussian(float *filter, float sigma) {
 	filter[y_idx*sz + x_idx] /= arr[1];
 }
 
-// template <float sigma>
+// template <int sig>
 // __global__ void generateGaussian(float *filter) {
+
+// 	float sigma = sig/100;
 // 	int x_idx = threadIdx.x + blockDim.x * blockIdx.x;
 // 	int y_idx = threadIdx.y + blockDim.y * blockIdx.y;
 // 	int sz = blockDim.x; // always odd
@@ -307,8 +309,10 @@ __global__ void hysteresis(float* supp, size_t r, size_t c, float low, float hig
 		*ctr = arr[0];
 }
 
-// template <float low, float high>
+// template <int l, int h>
 // __global__ void hysteresis(float* supp, size_t r, size_t c, int* ctr) {
+
+// 	float low = l/100, high = h/100;
 // 	int j = threadIdx.x + blockDim.x * blockIdx.x;
 // 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 // 	int idx = i*c+j;
