@@ -93,11 +93,8 @@ int main(int argc, char* argv[]) {
     dim3 block(3, 3);
     dim3 grid(1, 1);
     generateGaussian<<<grid, block, 0, stream0>>>(filter, 1.0);
+    // generateGaussian<1.0><<<grid, block, 0, stream0>>>(filter);
     err = cudaMemcpyAsync(dimg, himg, image.rows * image.cols * sizeof(float), cudaMemcpyHostToDevice, stream1);
-
-    // for (int i = 0; i < 9; i++)
-    // 	cout << filter[i] << " ";
-    // cout << endl;
 
     // perform some CPU-side instructions before waiting for above 2 streams to finish
     block.x = bdx; block.y = bdy;
@@ -152,7 +149,8 @@ int main(int argc, char* argv[]) {
 
 		*ctr = 0;
 		hysteresis<<<grid, block, 0, stream0>>>(doutput, image.rows, image.cols, 0.08, 0.11, ctr);
-		err = cudaDeviceSynchronize();
+		// hysteresis<0.08, 0.11><<<grid, block, 0, stream0>>>(doutput, image.rows, image.cols, ctr);
+        err = cudaDeviceSynchronize();
 		cout << *ctr << endl;
 	
 	} while (*ctr != 0);

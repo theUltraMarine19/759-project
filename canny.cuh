@@ -13,4 +13,7 @@ __global__ void q_init(float* supp, float high, float *q, int *back, size_t r, s
 __global__ void hysteresis(float* supp, size_t r, size_t c, float low, float high, int* ctr);
 __global__ void weak_disconnected_edge_removal(float* supp, size_t r, size_t c);
 
+// template <float sigma> __global__ void generateGaussian(float *filter);
+// template <float low, float high> __global__ void hysteresis(float* supp, size_t r, size_t c, int* ctr);
+
 #endif

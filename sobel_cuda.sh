@@ -6,5 +6,7 @@
 
 module load cuda
 nvcc sobel_main.cu sobel.cu `pkg-config --cflags --libs ~/installation/OpenCV-3.4.4/lib64/pkgconfig/opencv.pc` -Xcompiler -O3 -Xcompiler -Wall -Xptxas -O3 -o sobel_main.o
-./sobel_main.o 32 32
+#./sobel_main.o 32 32
+# nvprof --unified-memory-profiling off ./sobel_main.o 32 32
+nvvp ./sobel_main.o 32 32 
 # cuda-memcheck ./sobel_main.o

@@ -89,13 +89,9 @@ int main(int argc, char* argv[]) {
     dim3 block(3, 3);
     dim3 grid(1, 1);
     generateGaussian<<<grid, block>>>(filter, 1.0);
+    // generateGaussian<1.0><<<grid, block>>>(filter);
     err = cudaDeviceSynchronize();
 
-    // for (int i = 0; i < 9; i++)
-    // 	cout << filter[i] << " ";
-    // cout << endl;
-    
-    
     conv(dimg, filter, smooth_img, image.rows, image.cols, bdx, bdy);
     err = cudaDeviceSynchronize();
     
@@ -132,6 +128,7 @@ int main(int argc, char* argv[]) {
 
 		*ctr = 0;
 		hysteresis<<<grid, block>>>(supp, image.rows, image.cols, 0.08, 0.11, ctr);
+        // hysteresis<0.08, 0.11><<<grid, block>>>(supp, image.rows, image.cols, ctr);
 		err = cudaDeviceSynchronize();
 		cout << *ctr << endl;
 	
