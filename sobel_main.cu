@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
     // 	cout << endl;
     // }
 
-    cout << image.rows << " " << image.cols << endl;
+    // cout << image.rows << " " << image.cols << endl;
 
     float maskx[9] = {-1,-2,-1,0,0,0,1,2,1};
     float masky[9] = {-1,0,1,-2,0,2,-1,0,1};
@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
   	
   	
   	err = cudaMemcpy(dimg, norm_image.ptr<float>(), image.rows * image.cols * sizeof(float), cudaMemcpyHostToDevice);
-  	cout << cudaGetErrorName(err) << endl;
+  	// cout << cudaGetErrorName(err) << endl;
   	err = cudaMemcpy(dmaskx, maskx, 9 * sizeof(float), cudaMemcpyHostToDevice);
   	// cout << cudaGetErrorName(err) << endl;
   	err = cudaMemcpy(dmasky, masky, 9 * sizeof(float), cudaMemcpyHostToDevice);

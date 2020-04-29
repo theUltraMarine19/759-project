@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
     normalize(image, norm_image, 0, 1, NORM_MINMAX, CV_32F);
     float *img = norm_image.ptr<float>(0);
 
-    cout << image.rows << " " << image.cols << endl;
+    // cout << image.rows << " " << image.cols << endl;
 
     float maskx[9] = {-1,-2,-1,0,0,0,1,2,1};
     float masky[9] = {-1,0,1,-2,0,2,-1,0,1};
@@ -90,6 +90,10 @@ int main(int argc, char* argv[]) {
     dim3 grid(1, 1);
     generateGaussian<<<grid, block>>>(filter, 1.0);
     err = cudaDeviceSynchronize();
+
+    // for (int i = 0; i < 9; i++)
+    // 	cout << filter[i] << " ";
+    // cout << endl;
     
     
     conv(dimg, filter, smooth_img, image.rows, image.cols, bdx, bdy);
@@ -100,8 +104,6 @@ int main(int argc, char* argv[]) {
     normalize(smoothed, norm_smoothed, 0, 1, NORM_MINMAX, CV_32F);
     err = cudaFree(smooth_img);
     
-    smooth_img = norm_smoothed.ptr<float>(0);
-
     err = cudaMemcpy(dimg, norm_smoothed.ptr<float>(), image.rows * image.cols * sizeof(float), cudaMemcpyHostToDevice);
     
     conv_opt(dimg, dmaskx1, dmaskx2, outx, image.rows, image.cols, bdx, bdy);
@@ -115,17 +117,13 @@ int main(int argc, char* argv[]) {
     Mat mag = Mat(image.rows, image.cols, CV_32F, output);
     Mat norm_mag;
     normalize(mag, norm_mag, 0, 1, NORM_MINMAX, CV_32F);
-    cudaFree(output);
-    output = norm_mag.ptr<float>(0);
-
+    
 	err = cudaMemcpy(dimg, norm_mag.ptr<float>(), image.rows * image.cols * sizeof(float), cudaMemcpyHostToDevice);
     err = cudaMemcpy(supp, norm_mag.ptr<float>(), image.rows * image.cols * sizeof(float), cudaMemcpyHostToDevice);
-    // cout << cudaGetErrorName(err) << endl;
-
+    
 	NonMaxSuppression<<<grid, block>>>(grad, dimg, supp, image.rows, image.cols);
     err = cudaDeviceSynchronize();
-  	// cout << cudaGetErrorName(err) << endl;
-
+  	
 	// q_init<<<grid, block>>>(supp, 0.11, queue, back, image.rows, image.cols, mutex);
 	// err = cudaDeviceSynchronize();
 
@@ -135,14 +133,13 @@ int main(int argc, char* argv[]) {
 		hysteresis<<<grid, block>>>(supp, image.rows, image.cols, 0.08, 0.11, ctr);
 		err = cudaDeviceSynchronize();
 		cout << *ctr << endl;
-		// cout << cudaGetErrorName(err) << endl;
+	
 	} while (*ctr != 0);
 	
 	
 	weak_disconnected_edge_removal<<<grid, block>>>(supp, image.rows, image.cols);
 	err = cudaDeviceSynchronize(); 
-	// cout << cudaGetErrorName(err) << endl; 	
-
+	
   	cudaEventRecord(stop);
   	cudaEventSynchronize(stop);
 
@@ -165,7 +162,7 @@ int main(int argc, char* argv[]) {
   	err = cudaFree(outx);
   	err = cudaFree(outy);
   	err = cudaFree(output);
-  	err = cudaFree(dmaskx);
+    err = cudaFree(dmaskx);
   	err = cudaFree(dmasky);
   	err = cudaFree(dmaskx1);
   	err = cudaFree(dmaskx2);

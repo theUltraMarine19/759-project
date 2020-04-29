@@ -64,12 +64,12 @@ int main( int argc, char** argv )
     start = chrono::high_resolution_clock::now();
     generateGaussian(filter, 3, 1.0);
 
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            cout << filter[i*3+j] << " ";
-        }
-        cout << endl;
-    }
+    // for (int i = 0; i < 3; i++) {
+    //     for (int j = 0; j < 3; j++) {
+    //         cout << filter[i*3+j] << " ";
+    //     }
+    //     cout << endl;
+    // }
 
     /* Do a convolution of image with the Gaussian filter */
     Convolve(img, smooth_img, image.rows, image.cols, filter, 3);

@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
 
   	memcpy(himg, norm_image.ptr<float>(), image.rows * image.cols * sizeof(float));
   	
-  	float *dmaskx, *dmasky, *dmaskx1, *dmaskx2; // masky1 = maskx2 and masky2 = maskx1
+  	float *dmaskx, *dmasky, *dmaskx1, *dmaskx2; 			// masky1 = maskx2 and masky2 = maskx1
   	err = cudaMalloc((void **)&dmaskx, 9 * sizeof(float));
   	err = cudaMalloc((void **)&dmasky, 9 * sizeof(float));
   	err = cudaMalloc((void **)&dmaskx1, 3 * sizeof(float));
@@ -114,7 +114,7 @@ int main(int argc, char* argv[]) {
   	magnitude<<<grid, block, 0, stream0>>>(doutx, douty, doutput, image.rows, image.cols);
    	err = cudaMemcpyAsync(houty, douty, image.rows * image.cols * sizeof(float), cudaMemcpyDeviceToHost, stream1);
 
-   	err = cudaMemcpyAsync(houtput, doutput, image.rows * image.cols * sizeof(float), cudaMemcpyDeviceToHost, stream0);
+   	err = cudaMemcpy(houtput, doutput, image.rows * image.cols * sizeof(float), cudaMemcpyDeviceToHost);
    	
   	cudaEventRecord(stop);
   	cudaEventSynchronize(stop);

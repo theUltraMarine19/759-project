@@ -12,7 +12,7 @@ __global__ void generateGaussian(float *filter, float sigma) {
 	int y_idx = threadIdx.y + blockDim.y * blockIdx.y;
 	int sz = blockDim.x; // always odd
 
-	volatile __shared__ float arr[2]; // Can't use "volatile" to prevent shmem data from being directly loaded onto registers
+	__shared__ float arr[2]; // Can't use "volatile" to prevent shmem data from being directly loaded onto registers
 	// float deno = arr[0]; 									
 	// float sum = arr[1];
 
@@ -28,7 +28,7 @@ __global__ void generateGaussian(float *filter, float sigma) {
 	/* Effectively serializing the next part of code. Hurts parallelism massively */
 
 	// Protection against all threads trying to modify this variable
-	atomicAdd((int*)&arr[1], filter[y_idx*sz + x_idx]); // memory transaction takes place immediately since volatile
+	atomicAdd(&arr[1], filter[y_idx*sz + x_idx]); // memory transaction takes place immediately since volatile
 	__syncthreads(); // wiat for all threads to have updated the "sum" variable
 
 	filter[y_idx*sz + x_idx] /= arr[1];
@@ -138,9 +138,11 @@ __global__ void hysteresis(float* supp, size_t r, size_t c, float low, float hig
 	int i = threadIdx.y + blockDim.y * blockIdx.y;
 	int idx = i*c+j;
 
-	volatile __shared__ int arr[1];
+	__shared__ int arr[1];
 	if (threadIdx.x == 0 && threadIdx.y == 0)
 		arr[0] = *ctr;
+
+	__syncthreads();
 
 	if (i < r && j < c) {
 		if (supp[idx] > high) {
@@ -149,42 +151,42 @@ __global__ void hysteresis(float* supp, size_t r, size_t c, float low, float hig
 			// unroll loops
 			if (i+1 < r && j+1 < c && supp[(i+1)*c+(j+1)] > low && supp[(i+1)*c+(j+1)] != 1.0) { // southeast
 				supp[(i+1)*c+(j+1)] = 1.0;
-				atomicAdd((int*)&arr[0], 1);
+				atomicAdd(&arr[0], 1);
 			}
 			
 			if (j+1 < c && supp[i*c+(j+1)] > low && supp[i*c+(j+1)] != 1.0) {	// east
 				supp[i*c+(j+1)] = 1.0;
-				atomicAdd((int*)&arr[0], 1);
+				atomicAdd(&arr[0], 1);
 			}
 			
 			if (i+1 < r && supp[(i+1)*c+j] > low && supp[(i+1)*c+j] != 1.0) {	// south 
 				supp[(i+1)*c+j] = 1.0;
-				atomicAdd((int*)&arr[0], 1);
+				atomicAdd(&arr[0], 1);
 			}
 
 			if (i-1 >= 0 && supp[(i-1)*c+j] > low && supp[(i-1)*c+j] != 1.0) { // north
 				supp[(i-1)*c+j] = 1.0;
-				atomicAdd((int*)&arr[0], 1);
+				atomicAdd(&arr[0], 1);
 			}
 
 			if (j-1 >= 0 && supp[i*c+(j-1)] > low && supp[i*c+(j-1)] != 1.0) { // west
 				supp[i*c+(j-1)] = 1.0;
-				atomicAdd((int*)&arr[0], 1);
+				atomicAdd(&arr[0], 1);
 			}
 
 			if (i+1 < r && j-1 >= 0 && supp[(i+1)*c+(j-1)] > low && supp[(i+1)*c+(j-1)] != 1.0) { // southwest 
 				supp[(i+1)*c+(j-1)] = 1.0;
-				atomicAdd((int*)&arr[0], 1);
+				atomicAdd(&arr[0], 1);
 			}
 
 			if (i-1 >= 0 && j+1 < c && supp[(i-1)*c+(j+1)] > low && supp[(i-1)*c+(j+1)] != 1.0) { // northeast 
 				supp[(i-1)*c+(j+1)] = 1.0;
-				atomicAdd((int*)&arr[0], 1);
+				atomicAdd(&arr[0], 1);
 			}
 
 			if (i-1 >= 0 && j-1 >= 0 && supp[(i-1)*c+(j-1)] > low && supp[(i-1)*c+(j-1)] != 1.0) { // northwest 
 				supp[(i-1)*c+(j-1)] = 1.0;
-				atomicAdd((int*)&arr[0], 1);
+				atomicAdd(&arr[0], 1);
 			}
 
 		}
