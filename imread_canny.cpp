@@ -88,7 +88,7 @@ int main( int argc, char** argv )
     convolve1D_horiz(smooth_img, temp, image.rows, image.cols, masky1, 3);
     convolve1D_vert(temp, outputy, image.rows, image.cols, masky2, 3);
 
-    mag_grad(outputx, outputy, output, grad, image.rows, image.cols);
+    mag_gradient(outputx, outputy, output, grad, image.rows, image.cols);
     
     Mat mag = Mat(image.rows, image.cols, CV_32F, output);
     Mat norm_mag;
@@ -135,7 +135,7 @@ int main( int argc, char** argv )
 
     Mat write_out;
     normalize(norm_out, write_out, 0, 255, NORM_MINMAX, CV_8U);
-    imwrite("canny1.png", write_out);
+    imwrite("canny2.png", write_out);
 
     delete[] temp;
     delete[] outputx;

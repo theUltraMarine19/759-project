@@ -31,7 +31,7 @@ void generateGaussian(float *filter, size_t m, float sigma) {
 	}
 }
 
-void mag_grad(float *Gx, float *Gy, float *magn, float *grad, size_t r, size_t c) {
+void mag_gradient(float *Gx, float *Gy, float *magn, float *grad, size_t r, size_t c) {
 	#pragma omp parallel for simd collapse(2)
 	for (size_t i = 0; i < r; i++) {
 		for (size_t j = 0; j < c; j++) {
@@ -113,9 +113,9 @@ void rec_hysteresis(float *supp, size_t idxr, size_t idxc, size_t r, size_t c, f
 						supp[i*c+j] = 1.0;
 						rec_hysteresis(supp, i, j, r, c, low, high);
 					}
-					else {
-						supp[i*c+j] = 0.0;
-					}
+					// else {
+					// 	supp[i*c+j] = 0.0;
+					// }
 				}
 			}
 		}

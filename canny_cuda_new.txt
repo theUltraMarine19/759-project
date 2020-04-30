@@ -1,35 +1,35 @@
-==4658== NVPROF is profiling process 4658, command: ./canny_main.o 32 32
+==8278== NVPROF is profiling process 8278, command: ./canny_main.o 32 32
 cudaSuccess
-37.1485
-==4658== Profiling application: ./canny_main.o 32 32
-==4658== Profiling result:
+34.9885
+==8278== Profiling application: ./canny_main.o 32 32
+==8278== Profiling result:
             Type  Time(%)      Time     Calls       Avg       Min       Max  Name
- GPU activities:   27.49%  4.3849ms         8  548.12us     672ns  1.6465ms  [CUDA memcpy HtoD]
-                   27.34%  4.3613ms        14  311.52us  187.84us  693.28us  hysteresis(float*, unsigned long, unsigned long, float, float, int*)
-                   17.79%  2.8375ms         2  1.4187ms  1.3813ms  1.4562ms  conv_kernel_vert_opt(float const *, float const *, float*, unsigned int, unsigned int)
-                   12.41%  1.9798ms         1  1.9798ms  1.9798ms  1.9798ms  mag_grad(float*, float*, float*, float*, unsigned long, unsigned long)
-                    8.44%  1.3462ms         1  1.3462ms  1.3462ms  1.3462ms  conv_kernel(float const *, float const *, float*, unsigned int, unsigned int)
-                    2.16%  345.09us         2  172.54us  172.32us  172.77us  conv_kernel_horiz(float const *, float const *, float*, unsigned int, unsigned int)
-                    1.93%  308.39us         1  308.39us  308.39us  308.39us  [CUDA memset]
-                    1.83%  292.23us         1  292.23us  292.23us  292.23us  NonMaxSuppression(float*, float*, float*, unsigned long, unsigned long)
-                    0.59%  93.600us         1  93.600us  93.600us  93.600us  weak_disconnected_edge_removal(float*, unsigned long, unsigned long)
+ GPU activities:   31.15%  4.4311ms         8  553.89us     672ns  1.7041ms  [CUDA memcpy HtoD]
+                   19.43%  2.7636ms         2  1.3818ms  1.3272ms  1.4364ms  conv_kernel_vert_opt(float const *, float const *, float*, unsigned int, unsigned int)
+                   17.55%  2.4959ms         8  311.99us  187.43us  769.67us  hysteresis(float*, unsigned long, unsigned long, float, float, int*)
+                   14.02%  1.9945ms         1  1.9945ms  1.9945ms  1.9945ms  mag_grad(float*, float*, float*, float*, unsigned long, unsigned long)
+                   10.70%  1.5226ms         1  1.5226ms  1.5226ms  1.5226ms  conv_kernel(float const *, float const *, float*, unsigned int, unsigned int)
+                    2.43%  346.05us         2  173.03us  172.99us  173.06us  conv_kernel_horiz(float const *, float const *, float*, unsigned int, unsigned int)
+                    2.05%  291.71us         1  291.71us  291.71us  291.71us  NonMaxSuppression(float*, float*, float*, unsigned long, unsigned long)
+                    1.98%  281.47us         1  281.47us  281.47us  281.47us  [CUDA memset]
+                    0.66%  93.697us         1  93.697us  93.697us  93.697us  weak_disconnected_edge_removal(float*, unsigned long, unsigned long)
                     0.03%  4.1280us         1  4.1280us  4.1280us  4.1280us  generateGaussian(float*, float)
-      API calls:   91.99%  279.47ms         2  139.73ms  2.9790us  279.47ms  cudaEventCreate
-                    3.73%  11.329ms        24  472.02us  2.0470us  1.9829ms  cudaDeviceSynchronize
-                    1.66%  5.0336ms         8  629.20us  5.7680us  1.8322ms  cudaMemcpy
-                    1.46%  4.4344ms        14  316.74us  4.1600us  909.74us  cudaFree
-                    0.41%  1.2397ms         7  177.10us  4.5740us  520.95us  cudaMalloc
-                    0.23%  698.40us        23  30.365us  8.5580us  385.26us  cudaLaunchKernel
-                    0.21%  631.22us        97  6.5070us     167ns  307.45us  cuDeviceGetAttribute
-                    0.11%  349.21us         1  349.21us  349.21us  349.21us  cudaMemset
-                    0.11%  332.92us         1  332.92us  332.92us  332.92us  cuDeviceTotalMem
-                    0.07%  209.37us         8  26.171us  10.636us  60.780us  cudaMallocManaged
-                    0.02%  48.120us         1  48.120us  48.120us  48.120us  cuDeviceGetName
-                    0.00%  13.919us         2  6.9590us  5.4040us  8.5150us  cudaEventRecord
-                    0.00%  3.5320us         1  3.5320us  3.5320us  3.5320us  cudaEventSynchronize
-                    0.00%  2.8250us         1  2.8250us  2.8250us  2.8250us  cuDeviceGetPCIBusId
-                    0.00%  2.2280us         1  2.2280us  2.2280us  2.2280us  cudaEventElapsedTime
-                    0.00%  1.4400us         2     720ns     586ns     854ns  cuDeviceGetCount
-                    0.00%  1.0580us         1  1.0580us  1.0580us  1.0580us  cudaGetErrorName
-                    0.00%     622ns         2     311ns     287ns     335ns  cuDeviceGet
-                    0.00%     362ns         1     362ns     362ns     362ns  cuDeviceGetUuid
+      API calls:   91.82%  252.34ms         2  126.17ms  3.2240us  252.33ms  cudaEventCreate
+                    3.48%  9.5641ms        18  531.34us  2.0140us  1.9979ms  cudaDeviceSynchronize
+                    1.83%  5.0353ms         8  629.41us  5.7110us  1.8905ms  cudaMemcpy
+                    1.61%  4.4310ms        14  316.50us  4.2000us  928.03us  cudaFree
+                    0.50%  1.3693ms         7  195.61us  4.7140us  661.39us  cudaMalloc
+                    0.25%  678.89us        17  39.934us  8.9470us  408.75us  cudaLaunchKernel
+                    0.17%  467.67us        97  4.8210us     173ns  251.57us  cuDeviceGetAttribute
+                    0.12%  329.60us         1  329.60us  329.60us  329.60us  cuDeviceTotalMem
+                    0.12%  321.46us         1  321.46us  321.46us  321.46us  cudaMemset
+                    0.07%  198.24us         8  24.780us  10.580us  48.571us  cudaMallocManaged
+                    0.02%  45.549us         1  45.549us  45.549us  45.549us  cuDeviceGetName
+                    0.01%  14.373us         2  7.1860us  6.0660us  8.3070us  cudaEventRecord
+                    0.00%  9.9930us         2  4.9960us     268ns  9.7250us  cuDeviceGet
+                    0.00%  3.7000us         1  3.7000us  3.7000us  3.7000us  cudaEventSynchronize
+                    0.00%  2.7410us         1  2.7410us  2.7410us  2.7410us  cuDeviceGetPCIBusId
+                    0.00%  2.3250us         1  2.3250us  2.3250us  2.3250us  cudaEventElapsedTime
+                    0.00%  1.4170us         2     708ns     468ns     949ns  cuDeviceGetCount
+                    0.00%  1.0310us         1  1.0310us  1.0310us  1.0310us  cudaGetErrorName
+                    0.00%     326ns         1     326ns     326ns     326ns  cuDeviceGetUuid

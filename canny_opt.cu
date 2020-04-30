@@ -2,8 +2,10 @@
 #include "/srv/home/arijit/installation/OpenCV-3.4.4/include/opencv2/imgcodecs.hpp"
 #include <iostream>
 #include <queue>
+#include <omp.h>
 #include "canny.cuh"
 #include "sobel.cuh"
+#include "canny.h"
 
 using namespace cv;
 using namespace std;
@@ -12,6 +14,7 @@ int main(int argc, char* argv[]) {
 	
   	int bdx = atoi(argv[1]);
   	int bdy = atoi(argv[2]);
+    int t = atoi(argv[3]);
   	
   	cudaError_t err;
 
@@ -23,6 +26,8 @@ int main(int argc, char* argv[]) {
   	cudaStream_t stream0, stream1;
 	cudaStreamCreate(&stream0);
 	cudaStreamCreate(&stream1);
+
+    omp_set_num_threads(t);
 
   	Mat image, norm_image;
     image = imread("license.jpg", 0); 	
@@ -51,7 +56,8 @@ int main(int argc, char* argv[]) {
   	err = cudaMalloc((void **)&douty, image.rows * image.cols * sizeof(float));
   	err = cudaMalloc((void **)&doutput, image.rows * image.cols * sizeof(float));
 	
-	float *himg, *houtx, *houty, *houtput;
+	float *himg, *houtx, *houty, *houtput, *hfilter;
+    // err = cudaHostAlloc((void **)&hfilter, 9*sizeof(float), cudaHostAllocDefault);
   	err = cudaHostAlloc((void **)&himg, image.rows*image.cols*sizeof(float), cudaHostAllocDefault);
   	err = cudaHostAlloc((void **)&houtx, image.rows*image.cols*sizeof(float), cudaHostAllocDefault);
   	err = cudaHostAlloc((void **)&houty, image.rows*image.cols*sizeof(float), cudaHostAllocDefault);
@@ -92,10 +98,13 @@ int main(int argc, char* argv[]) {
 
     dim3 block(3, 3);
     dim3 grid(1, 1);
-    generateGaussian<<<grid, block, 0, stream0>>>(filter, 1.0);
-    // generateGaussian<1.0><<<grid, block, 0, stream0>>>(filter);
-    err = cudaMemcpyAsync(dimg, himg, image.rows * image.cols * sizeof(float), cudaMemcpyHostToDevice, stream1);
 
+    err = cudaMemcpyAsync(dimg, himg, image.rows * image.cols * sizeof(float), cudaMemcpyHostToDevice, stream1);
+    // err = cudaMemcpyAsync(filter, hfilter, 9 * sizeof(float), cudaMemcpyHostToDevice, stream0);
+    // generateGaussian(hfilter, 3, 1.0);
+
+    generateGaussian<<<grid, block, 0, stream0>>>(filter, 1.0);
+    
     // perform some CPU-side instructions before waiting for above 2 streams to finish
     block.x = bdx; block.y = bdy;
     grid.x = (image.cols + block.x - 1)/block.x; grid.y = (image.rows + block.y - 1)/block.y;
@@ -141,24 +150,10 @@ int main(int argc, char* argv[]) {
 	err = cudaMemcpy(doutput, dimg, image.rows * image.cols * sizeof(float), cudaMemcpyDeviceToDevice);
     
 	NonMaxSuppression<<<grid, block, (bdx+2)*(bdy+2)*sizeof(float), stream0>>>(dgrad, dimg, doutput, image.rows, image.cols);
-    err = cudaDeviceSynchronize();
-  	
-    // err = cudaMemcpy(houtput, doutput, image.rows * image.cols * sizeof(float), cudaMemcpyDeviceToHost);
+    
+    err = cudaMemcpy(houtput, doutput, image.rows * image.cols * sizeof(float), cudaMemcpyDeviceToHost);
 
-  	do {
-
-		*ctr = 0;
-		hysteresis<<<grid, block, 0, stream0>>>(doutput, image.rows, image.cols, 0.08, 0.11, ctr);
-		// hysteresis<0.08, 0.11><<<grid, block, 0, stream0>>>(doutput, image.rows, image.cols, ctr);
-        err = cudaDeviceSynchronize();
-		// cout << *ctr << endl;
-	
-	} while (*ctr != 0);
-	
-	
-	weak_disconnected_edge_removal<<<grid, block, 0, stream0>>>(doutput, image.rows, image.cols);
-	
-	err = cudaMemcpy(houtput, doutput, image.rows * image.cols * sizeof(float), cudaMemcpyDeviceToHost);
+  	hysteresis(houtput, image.rows, image.cols, 0.08, 0.11);
 
   	cudaEventRecord(stop);
   	cudaEventSynchronize(stop);
@@ -174,7 +169,7 @@ int main(int argc, char* argv[]) {
 
 	Mat write_out;
 	normalize(norm_out, write_out, 0, 255, NORM_MINMAX, CV_8U);
-	imwrite("canny1_stream.png", write_out);
+	imwrite("canny1_opt.png", write_out);
 
 	err = cudaFree(dimg);
   	err = cudaFree(filter);
