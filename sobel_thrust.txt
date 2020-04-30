@@ -1,0 +1,26 @@
+==19423== NVPROF is profiling process 19423, command: ./sobel_thrust.o 32 32
+21.5247
+==19423== Done!
+Profiling application: ./sobel_thrust.o 32 32
+==19423== Profiling result:
+            Type  Time(%)      Time     Calls       Avg       Min       Max  Name
+ GPU activities:   71.07%  3.0322ms         2  1.5161ms  1.3507ms  1.6815ms  conv_kernel_vert_opt(float const *, float const *, float*, unsigned int, unsigned int)
+                   20.86%  890.11us         5  178.02us     672ns  887.01us  [CUDA memcpy HtoD]
+                    8.07%  344.13us         2  172.06us  171.97us  172.16us  conv_kernel_horiz(float const *, float const *, float*, unsigned int, unsigned int)
+      API calls:   97.39%  367.87ms         2  183.94ms  1.3170us  367.87ms  cudaEventCreate
+                    0.86%  3.2479ms         4  811.98us  36.421us  1.6836ms  cudaDeviceSynchronize
+                    0.72%  2.7320ms        10  273.20us  5.1630us  710.49us  cudaFree
+                    0.32%  1.2072ms         7  172.45us  5.1310us  568.58us  cudaMalloc
+                    0.31%  1.1699ms         5  233.97us  5.6170us  1.0556ms  cudaMemcpy
+                    0.16%  602.34us        97  6.2090us     164ns  286.14us  cuDeviceGetAttribute
+                    0.10%  367.27us         4  91.818us  8.0010us  323.82us  cudaLaunchKernel
+                    0.09%  329.33us         1  329.33us  329.33us  329.33us  cuDeviceTotalMem
+                    0.03%  107.62us         3  35.871us  22.084us  60.154us  cudaMallocManaged
+                    0.01%  43.641us         1  43.641us  43.641us  43.641us  cuDeviceGetName
+                    0.01%  20.252us         2  10.126us  8.0660us  12.186us  cudaEventRecord
+                    0.00%  6.5980us         1  6.5980us  6.5980us  6.5980us  cudaEventSynchronize
+                    0.00%  2.5170us         1  2.5170us  2.5170us  2.5170us  cuDeviceGetPCIBusId
+                    0.00%  2.1760us         1  2.1760us  2.1760us  2.1760us  cudaEventElapsedTime
+                    0.00%  1.4570us         2     728ns     633ns     824ns  cuDeviceGetCount
+                    0.00%     698ns         2     349ns     311ns     387ns  cuDeviceGet
+                    0.00%     345ns         1     345ns     345ns     345ns  cuDeviceGetUuid
