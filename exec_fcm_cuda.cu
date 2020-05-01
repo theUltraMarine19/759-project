@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
     int i_rows, i_cols;
     int i_num_clutsers;
     int i_image_size;
-    int i_m;
+    int i_m = 2;
 
     // read image from cmd line
     Mat image, norm_image;
@@ -59,14 +59,14 @@ int main(int argc, char* argv[]) {
     }
 
     // initialize variables for computation
-    init_membership(i_membership);
-    init_centers(i_cluster_centers);
+    init_membership(i_membership, rows, cols, num_clusters);
+    init_centers(i_cluster_centers, num_clusters);
 
 
     // perform FCM and measure execution time here
     cudaEventRecord(start);
     // RUN_FCM_HERE
-    fcm_step(i_image, i_membership, rows, cols, epochs, num_clusters);
+    fcm_step(i_image, i_membership, i_cluster_centers, rows, cols, epochs, num_clusters, i_m);
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
 
