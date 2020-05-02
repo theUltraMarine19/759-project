@@ -4,5 +4,5 @@
 #SBATCH -o fcm_cuda.out -e fcm_cuda.err
 #SBATCH --gres=gpu:1
 
-./fcm_cuda lenna.jpg 32
+./exec_fcm_cuda.o 32 lenna.jpg
 
