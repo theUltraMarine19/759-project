@@ -109,27 +109,33 @@ __global__ void update_centers_kernel(float *i_image, float *i_membership, float
     // cout <<endl;
 
     // shared memory that stores: the centers
-    extern __shared__ int shared_d[];
+    extern __shared__ float shared_d[];
     int global_idx = blockIdx.x * blockDim.x + threadIdx.x;
     float u_ij_m = 0, x_u_ij_m = 0;
 
-    int x = global_idx % i_rows ;
-    int y = ((global_idx - x) / i_rows) % i_cols;
-    int z = ((global_idx - x - y) / (i_rows * i_cols));
+    // int x = global_idx % i_rows ;
+    // int y = ((global_idx - x) / i_rows) % i_cols;
+    // int z = ((global_idx - x - y * i_rows) / (i_rows * i_cols));
 
-
-    for (int i = 0; i < i_rows; ++i) {
-        for (int j = 0; j < i_cols; ++j) {
-            u_ij_m += pow(i_membership[z * i_rows * i_cols + j * i_rows + i], i_m);
-            x_u_ij_m += i_image[i + i_rows * j] * pow(i_membership[z * i_rows * i_cols + j * i_rows + i], i_m);
+    if (global_idx < i_num_clutsers) {
+        for (int i = 0; i < i_rows; ++i) {
+            for (int j = 0; j < i_cols; ++j) {
+                u_ij_m += pow(i_membership[global_idx * i_rows * i_cols + j * i_rows + i], i_m);
+                x_u_ij_m += i_image[i + i_rows * j] * pow(i_membership[global_idx * i_rows * i_cols + j * i_rows + i], i_m);
+            }
         }
+
+        // store new center value in shared memory
+        shared_d[global_idx] = x_u_ij_m / u_ij_m;
+
+        // store center back to global memory
+        // i_cluster_centers[global_idx] = shared_d[global_idx];
+        // printf("x, u, x / u : %f %f %f\n", x_u_ij_m, u_ij_m, x_u_ij_m / u_ij_m);
+        i_cluster_centers[global_idx] = x_u_ij_m / u_ij_m;
     }
-
-    // store new center value in shared memory
-    shared_d[global_idx] = x_u_ij_m / u_ij_m;
-
-    // store center back to global memory
-    i_cluster_centers[global_idx] = shared_d[global_idx];
+    // else {
+    //     printf(":~/\n");
+    // }
     __syncthreads();
 }
 
@@ -151,7 +157,7 @@ __global__ void update_membership_kernel(float *i_image, float *i_cluster_center
     // std::printf("Dafuq?\n");
 
     // shared memory that stores: memberships for that pixel, 
-    extern __shared__ int shared_d[];
+    extern __shared__ float shared_d[];
     // std::printf("%f???\n", i_image[0]);
 
     // global index
@@ -166,7 +172,7 @@ __global__ void update_membership_kernel(float *i_image, float *i_cluster_center
     // std::printf("3?\n");
 
 
-    // load data into shared memory (each thread loads info for a **single** pixel)
+    // load data into shared memory (each thread loads info for a **single** pixel membership)
     if (global_idx < i_rows * i_cols * i_num_clutsers) {
         // load pixel (1)
         // std::printf("fxxk this sxit %f\n", i_image[global_idx]);
@@ -186,6 +192,16 @@ __global__ void update_membership_kernel(float *i_image, float *i_cluster_center
             shared_d[threadIdx.x] = 0;
         }
     }
+
+    
+    // printf("image membership: %f %f \n", shared_d[threadIdx.x * per_thread_len], shared_d[threadIdx.x * per_thread_len + 1]);
+    // printf("   centers: ");
+    // for (int j = 0; j < i_num_clutsers; ++j) {
+    //     printf("center %f", shared_d[threadIdx.x * per_thread_len + 1 + (j + 1)]);
+    // }
+    // printf("\n");
+    
+
     __syncthreads();
 
     // std::printf("Dafuq?\n");
@@ -193,22 +209,29 @@ __global__ void update_membership_kernel(float *i_image, float *i_cluster_center
     // calculate membership for the loaded pixel
     float d_center = 0, d_all = 0, aggr = 0.0;
     d_center = eucl_distance(shared_d[threadIdx.x * per_thread_len + 1 + (z + 1)], shared_d[threadIdx.x * per_thread_len]);
-    std::printf("d_center: %f\n", d_center);
+    // std::printf("a, b: %f, %f\n", shared_d[threadIdx.x * per_thread_len + 1 + (z + 1)], shared_d[threadIdx.x * per_thread_len]);
     for (int c = 0; c < i_num_clutsers; ++c) {
         d_all = eucl_distance(shared_d[threadIdx.x * per_thread_len + 1 + (c + 1)], shared_d[threadIdx.x * per_thread_len]);
         aggr += pow((d_center / d_all), 2 / (i_m - 1));
+        // printf("z c d_center d_all: %d %d %f %f \n", z, c, d_center, d_all);
     }
+
+    // printf("d_center: %f\n", d_center);
+    // printf("d_all: %f\n", d_all);
 
     // std::printf("Dafuq2?\n");
 
     // write aggregation results to membership value on shared memory
     // std::printf("Aggr: %f\n", aggr);
-    shared_d[threadIdx.x * per_thread_len + 1] = 1.0 / aggr;
+    // printf("z d_center d_all Aggr: %d %f %f %f\n", z, d_center, d_all, aggr);
+    shared_d[threadIdx.x * per_thread_len + 1] = 1.0 / (float)aggr;
     // std::printf("PLZ %f\n", shared_d[threadIdx.x * per_thread_len + 1]);
 
     // write back membership results to global memory
-    i_membership[(z * i_rows * i_cols) + y * i_rows + x] = shared_d[threadIdx.x * per_thread_len + 1];
-    // std::printf("WHY %f\n", i_membership[(z * i_rows * i_cols) + y * i_rows + x]);
+    // std::printf("PLZ %f\n", shared_d[threadIdx.x * per_thread_len + 1]);
+    i_membership[(z * i_rows * i_cols) + y * i_rows + x] = 1.0 / (float)aggr;
+    // printf("Member: %f\n", i_membership[(z * i_rows * i_cols) + y * i_rows + x]);
+    // std::printf("WHY %d %d %d %f\n", x, y, z, i_membership[(z * i_rows * i_cols) + y * i_rows + x]);
     __syncthreads();
 
 
@@ -275,14 +298,26 @@ __host__ void fcm_step(float *i_image, float *i_membership, float *i_cluster_cen
         // fcm_step_kernel<<<dimGrid, dimBlock, shared_size>>>(i_image, i_membership, i_cluster_centers, rows, cols, i_num_clutsers, i_m);
         // 1D grid of 2D blocks
         update_membership_kernel<<<blks_m, threads_per_block, shared_size_m>>>(d_image, d_cluster_centers, d_membership, rows, cols, i_num_clutsers, i_m);
-        cudaDeviceSynchronize();
+        // cudaDeviceSynchronize();
         update_centers_kernel<<<blks_c, threads_per_block, shared_size_c>>>(d_image, d_membership, d_cluster_centers, rows, cols, i_num_clutsers, i_m);
-        cudaDeviceSynchronize();
+        // cudaDeviceSynchronize();
         // cout << "Bye" << endl;
     }
     // fcm_step_kernel<<<dimGrid, dimBlock, shared_size>>>(i_image, i_membership, i_cluster_centers, rows, cols, i_num_clutsers, i_m);
 
     cudaMemcpy(out_membership, d_membership, rows * cols * i_num_clutsers * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(i_cluster_centers, d_cluster_centers, i_num_clutsers * sizeof(float), cudaMemcpyDeviceToHost);
+
+    // for (int i = 0; i < rows; ++i) {
+    //     for (int j = 0; j < cols; ++j) {
+    //         std::printf("[");
+    //         for (int k = 0; k < i_num_clutsers; ++k) {
+    //             std::printf("%f ", out_membership[(k * rows * cols) + j * rows + i]);
+    //         }
+    //         std::printf("]");
+    //     }
+    //     std::printf("\n");
+    // }
 
     cudaFree(d_image);
     cudaFree(d_membership);
@@ -318,14 +353,17 @@ __host__ void calculate_final_cluster(float *i_membership, int *i_final_cluster,
     for (int i = 0; i < i_rows; ++i) {
         for (int j = 0; j < i_cols; ++j) {
             float tmp_max = -9999;
+            // std::printf("[");
             for (int k = 0; k < i_num_clutsers; ++k) {
-                // std::printf("ss%f\n", i_membership[(k * i_rows * i_cols) + j * i_rows + i]);
+                // std::printf("%f ", i_membership[(k * i_rows * i_cols) + j * i_rows + i]);
                 if (i_membership[(k * i_rows * i_cols) + j * i_rows + i] >= tmp_max) {
                     tmp_max = i_membership[(k * i_rows * i_cols) + j * i_rows + i];
                     i_final_cluster[j * i_rows + i] = k;
                 }
             }
+            // std::printf("]");
         }
+        // std::printf("\n");
     }
 
 }

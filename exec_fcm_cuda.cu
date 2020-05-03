@@ -19,7 +19,7 @@ int main(int argc, char* argv[]) {
     }
 
     // set hyperparameters
-    int num_clusters = 6, i_m = 2, epochs = 10;
+    int num_clusters = 6, i_m = 2, epochs = 50;
 
     // variables for timing
     cudaEvent_t start;
@@ -48,7 +48,23 @@ int main(int argc, char* argv[]) {
     //     }
     // }
 
-    float *img = norm_image.ptr<float>(0);
+    float **img2 = new float*[rows];
+
+    for (int i = 0; i < rows; ++i) {
+        img2[i] = new float[cols];
+    }
+
+    for (int i = 0; i < rows; ++i) {
+        img2[i] = norm_image.ptr<float>(i);;
+    }
+
+    // float *img = norm_image.ptr<float>(0);
+    float *img = new float[rows * cols];
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            img[i + j * rows] = img2[i][j];
+        }
+    }
 
     // load image into array
     // float **img = new float*[rows];
@@ -73,6 +89,8 @@ int main(int argc, char* argv[]) {
         i_membership[i] = 1 / (float)num_clusters;
     }
 
+    cout << "Mem: " << 1 / (float)num_clusters << endl;
+
     for (int i = 0; i < num_clusters; ++i) {
         // randomly select i_num_clutsers points as cluster centers
 
@@ -82,6 +100,7 @@ int main(int argc, char* argv[]) {
         uniform_real_distribution<> dist(0, 1);
 
         i_cluster_centers[i] = dist(eng);
+        // i_cluster_centers[i] = (i + 1) / 10;
     }
 
 
