@@ -43,14 +43,14 @@ void FCM::init_membership() {
     // cout << i_cols << endl;
     // cout << i_rows << endl;
     i_membership = new float** [i_rows];
-    i_new_membership = new float** [i_rows];
+    // i_new_membership = new float** [i_rows];
 
     for (int i = 0; i < i_rows; ++i) {
         i_membership[i] = new float* [i_cols];
-        i_new_membership[i] = new float* [i_cols];
+        // i_new_membership[i] = new float* [i_cols];
         for (int j = 0; j < i_cols; ++j) {
             i_membership[i][j] = new float[i_num_clutsers];
-            i_new_membership[i][j] = new float[i_num_clutsers];
+            // i_new_membership[i][j] = new float[i_num_clutsers];
         }
         
     }
@@ -59,7 +59,7 @@ void FCM::init_membership() {
         for (int j = 0; j < i_cols; ++j) {
             for (int k = 0; k < i_num_clutsers; ++k) {
                 i_membership[i][j][k] = 1 / (float)i_num_clutsers;
-                i_new_membership[i][j][k] = 99999;
+                // i_new_membership[i][j][k] = 99999;
             }
         }
     }
@@ -188,17 +188,22 @@ void FCM::print_mebership() {
     cout << "Membership: " << endl;
     for (int i = 0; i < i_rows; ++i) {
         for (int j = 0; j < i_cols; ++j) {
-            float tmp_max = -9999;
+            float tmp_max = -999;
+            cout << "[";
             for (int k = 0; k < i_num_clutsers; ++k) {
+                cout << i_membership[i][j][k] << " ";
                 if (i_membership[i][j][k] >= tmp_max) {
                     // cout << "hi" << endl;
                     tmp_max = i_membership[i][j][k];
-                    i_final_cluster[i][j] = 255 / (float)(k + 1);
+                    // i_final_cluster[i][j] = 255 / (float)(k + 1);
+                    i_final_cluster[i][j] = k;
                 }
                 // cout << i_membership[i][j][k] << " ";
             }
+            cout << "]";
             // cout << endl;
         }
+        cout << endl;
     }
 }
 
