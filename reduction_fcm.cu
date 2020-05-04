@@ -3,7 +3,7 @@
 #include <fstream>
 #include <time.h>
 #include <random>
-#include "fcm_cuda.cuh"
+#include "reduction_fcm.cuh"
 
 using namespace std;
 
@@ -83,52 +83,18 @@ __device__ float eucl_distance(float center, float val) {
     return sqrt(pow(val - center, 2));
 }
 
-__global__ void update_centers_kernel(float *i_image, float *i_membership, float *i_cluster_centers, int i_rows, int i_cols, int i_num_clutsers, int i_m) {
-    // shared memory that stores: the centers
+__global__ void update_centers_numerator_kernel(float *i_image, float *i_membership, float *i_cluster_centers, int i_rows, int i_cols, int i_num_clutsers, int i_m, float* numerator, int c) {
     extern __shared__ float shared_d[];
     int global_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    float u_ij_m = 0, x_u_ij_m = 0;
+    int i = global_idx % i_rows;
+    int j = (global_idx - i) / i_rows;
+    int k = c;
 
-    if (global_idx < i_num_clutsers) {
-        for (int i = 0; i < i_rows; ++i) {
-            for (int j = 0; j < i_cols; ++j) {
-                u_ij_m += pow(i_membership[global_idx * i_rows * i_cols + j * i_rows + i], i_m);
-                x_u_ij_m += i_image[i + i_rows * j] * pow(i_membership[global_idx * i_rows * i_cols + j * i_rows + i], i_m);
-            }
-        }
-
-        // store new center value in shared memory
-        shared_d[global_idx] = x_u_ij_m / u_ij_m;
-
-        // store center back to global memory
-        // i_cluster_centers[global_idx] = shared_d[global_idx];
-        i_cluster_centers[global_idx] = x_u_ij_m / u_ij_m;
-    }
-    // else {
-    //     printf(":~/\n");
-    // }
-    __syncthreads();
-
-    extern __shared__ float shared_d[];
-    int global_idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-    // each thread loads one numerator element into shared memory
-    if (global_idx < i_rows * i_cols) {
-        shared_d[threadIdx.x] = pow(i_membership[global_idx * i_rows * i_cols + j * i_rows + i], i_m); 
-    }
-    else {
-        shared_d[threadIdx.x] = 0;
-    }
-
-}
-
-__global__ void update_centers_numerator_kernel(float *i_image, float *i_membership, float *i_cluster_centers, int i_rows, int i_cols, int i_num_clutsers, int i_m, float* numerator) {
-    extern __shared__ float shared_d[];
-    int global_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    // printf("1\n");
 
     // each thread loads one element into shared memory
     if (global_idx < i_rows * i_cols) {
-        shared_d[threadIdx.x] = i_membership[global_idx * i_rows * i_cols + j * i_rows + i]; 
+        shared_d[threadIdx.x] = i_image[i + i_rows * j] * pow(i_membership[k * i_rows * i_cols + j * i_rows + i], i_m); 
     }
     else {
         shared_d[threadIdx.x] = 0;
@@ -140,9 +106,9 @@ __global__ void update_centers_numerator_kernel(float *i_image, float *i_members
         if (threadIdx.x < s) {
             shared_d[threadIdx.x] += shared_d[threadIdx.x + s];
         }
+        __syncthreads();
     }
-    __syncthreads();
-
+    
     // write result back to global memory
     if (threadIdx.x == 0) {
         numerator[blockIdx.x] = shared_d[0];
@@ -150,13 +116,19 @@ __global__ void update_centers_numerator_kernel(float *i_image, float *i_members
 
 }
 
-__global__ update_centers_denominator_kernel(float *i_image, float *i_membership, float *i_cluster_centers, int i_rows, int i_cols, int i_num_clutsers, int i_m, float* denominator) {
+__global__ void update_centers_denominator_kernel(float *i_image, float *i_membership, float *i_cluster_centers, int i_rows, int i_cols, int i_num_clutsers, int i_m, float* denominator, int c) {
+    printf("222\n");
     extern __shared__ float shared_d[];
     int global_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int i = global_idx % i_rows;
+    int j = (global_idx - i) / i_rows;
+    int k = c;
+
+    printf("2\n");
 
     // each thread loads one element into shared memory
     if (global_idx < i_rows * i_cols) {
-        shared_d[threadIdx.x] = i_image[i + i_rows * j] * pow(i_membership[global_idx * i_rows * i_cols + j * i_rows + i], i_m);
+        shared_d[threadIdx.x] = pow(i_membership[k * i_rows * i_cols + j * i_rows + i], i_m);
     }
     else {
         shared_d[threadIdx.x] = 0;
@@ -168,13 +140,67 @@ __global__ update_centers_denominator_kernel(float *i_image, float *i_membership
         if (threadIdx.x < s) {
             shared_d[threadIdx.x] += shared_d[threadIdx.x + s];
         }
+        __syncthreads();
     }
-    __syncthreads();
-
+    
     // write result back to global memory
     if (threadIdx.x == 0) {
-        numerator[blockIdx.x] = shared_d[0];
+        denominator[blockIdx.x] = shared_d[0];
     }
+}
+
+__global__ void update_centers_kernel(float *i_image, float *i_membership, float *i_cluster_centers, int i_rows, int i_cols, int i_num_clutsers, int i_m, int threads_per_block) {
+    int global_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int blks = 1 + (i_rows * i_cols - 1) / threads_per_block;
+    unsigned int in_size = i_rows * i_cols;
+    unsigned int shared_size = threads_per_block * sizeof(float);
+    float *res_num = new float[blks];
+    float *res_den = new float[blks];
+    float *device_in_num, *device_in_den, *device_out_num, *device_out_den;
+    float numerator, denominator;
+
+    cudaMalloc((void **)&device_in_num, in_size * sizeof(float));
+    cudaMalloc((void **)&device_in_den, in_size * sizeof(float));
+    cudaMalloc((void **)&device_out_num, blks * sizeof(float));
+    cudaMalloc((void **)&device_out_den, blks * sizeof(float));
+    cudaMemcpyAsync(device_in_num, i_membership, in_size * sizeof(float), cudaMemcpyDeviceToDevice);
+    cudaMemcpyAsync(device_in_den, i_membership, in_size * sizeof(float), cudaMemcpyDeviceToDevice);
+
+    while (true) {
+        update_centers_numerator_kernel<<<blks, threads_per_block, shared_size>>>(i_image, device_in_num, i_cluster_centers, i_rows, i_cols, i_num_clutsers, i_m, device_out_num, global_idx);
+        printf("g\n");
+        cudaDeviceSynchronize();
+        update_centers_denominator_kernel<<<blks, threads_per_block, shared_size>>>(i_image, device_in_den, i_cluster_centers, i_rows, i_cols, i_num_clutsers, i_m, device_out_den, global_idx);
+        cudaDeviceSynchronize();
+        printf("gg\n");
+        if (blks == 1) {
+            break;
+        }
+
+        in_size = blks;
+        // device_out now holds the reduce result, copy to device in and reduce again (next time)
+        cudaMemcpyAsync(device_in_num, device_out_num, in_size * sizeof(float), cudaMemcpyDeviceToDevice);
+        cudaMemcpyAsync(device_in_den, device_out_den, in_size * sizeof(float), cudaMemcpyDeviceToDevice);
+
+        blks = 1 + ((blks - 1) / threads_per_block);
+    }
+
+    cudaMemcpyAsync(res_num, device_out_num, sizeof(float), cudaMemcpyDeviceToDevice);
+    cudaMemcpyAsync(res_den, device_out_den, sizeof(float), cudaMemcpyDeviceToDevice);
+
+    numerator = res_num[0];
+    denominator = res_den[0];
+
+    // update the cluster center (finally!)
+    i_cluster_centers[global_idx] = numerator / denominator;
+    __syncthreads();
+
+    delete [] res_num;
+    delete [] res_den;
+    cudaFree(device_in_num);
+    cudaFree(device_in_den);
+    cudaFree(device_out_num);
+    cudaFree(device_out_den);
 }
 
 __global__ void update_membership_kernel(float *i_image, float *i_cluster_centers, float *i_membership, int i_rows, int i_cols, int i_num_clutsers, int i_m) {
@@ -336,7 +362,7 @@ __host__ void fcm_step(float *i_image, float *i_membership, float *i_cluster_cen
         // 1D grid of 2D blocks
         update_membership_kernel<<<blks_m, threads_per_block, shared_size_m>>>(d_image, d_cluster_centers, d_membership, rows, cols, i_num_clutsers, i_m);
         // cudaDeviceSynchronize();
-        update_centers_kernel<<<blks_c, threads_per_block, shared_size_c>>>(d_image, d_membership, d_cluster_centers, rows, cols, i_num_clutsers, i_m);
+        update_centers_kernel<<<blks_c, threads_per_block, shared_size_c>>>(d_image, d_membership, d_cluster_centers, rows, cols, i_num_clutsers, i_m, threads_per_block);
         // cudaDeviceSynchronize();
         // cout << "Bye" << endl;
     }
