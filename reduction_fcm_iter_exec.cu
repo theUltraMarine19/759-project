@@ -19,7 +19,7 @@ int main(int argc, char* argv[]) {
     }
 
     // set hyperparameters
-    int num_clusters = 6, i_m = 2, epochs = 100;
+    int num_clusters = 7, i_m = 2, epochs = 200;
 
     // variables for timing
     cudaEvent_t start;
