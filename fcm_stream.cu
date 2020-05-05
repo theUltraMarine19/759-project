@@ -408,8 +408,8 @@ __host__ void fcm_step(float *i_image, float *i_membership, float *i_cluster_cen
         for (int i = 0; i < i_num_clutsers; ++i) {
             blks_c = 1 + (rows * cols - 1) / threads_per_block;
             while (true) {
-                update_centers_numerator_kernel<<<blks_c, threads_per_block, shared_size_c, stream1>>>(d_image, d_membership, d_cluster_centers, rows, cols, i_num_clutsers, i_m, device_out_num, i);
-                update_centers_denominator_kernel<<<blks_c, threads_per_block, shared_size_c, stream2>>>(d_image, d_membership, d_cluster_centers, rows, cols, i_num_clutsers, i_m, device_out_den, i);
+                update_centers_numerator_kernel<<<blks_c, threads_per_block, shared_size_c>>>(d_image, d_membership, d_cluster_centers, rows, cols, i_num_clutsers, i_m, device_out_num, i);
+                update_centers_denominator_kernel<<<blks_c, threads_per_block, shared_size_c>>>(d_image, d_membership, d_cluster_centers, rows, cols, i_num_clutsers, i_m, device_out_den, i);
                 // cudaDeviceSynchronize();
                 // don't re-initialize if we already have the final reduction result
                 if (blks_c == 1) {
@@ -419,15 +419,15 @@ __host__ void fcm_step(float *i_image, float *i_membership, float *i_cluster_cen
                 in_size = blks_c;
 
                 // device_out now holds the reduce result, copy to device in and reduce again (next time)
-                cudaMemcpyAsync(device_in_num, device_out_num, in_size * sizeof(float), cudaMemcpyDeviceToDevice, stream1);
-                cudaMemcpyAsync(device_in_den, device_out_den, in_size * sizeof(float), cudaMemcpyDeviceToDevice, stream2);
+                cudaMemcpy(device_in_num, device_out_num, in_size * sizeof(float), cudaMemcpyDeviceToDevice);
+                cudaMemcpy(device_in_den, device_out_den, in_size * sizeof(float), cudaMemcpyDeviceToDevice);
                 // cudaDeviceSynchronize();
 
                 blks_c = 1 + ((blks_c - 1) / threads_per_block);
 
             }
-            cudaMemcpyAsync(numerator, device_out_num, sizeof(float), cudaMemcpyDeviceToHost, stream1);
-            cudaMemcpyAsync(denominator, device_out_den, sizeof(float), cudaMemcpyDeviceToHost, stream2);
+            cudaMemcpy(numerator, device_out_num, sizeof(float), cudaMemcpyDeviceToHost);
+            cudaMemcpy(denominator, device_out_den, sizeof(float), cudaMemcpyDeviceToHost);
 
             cudaDeviceSynchronize();
 
