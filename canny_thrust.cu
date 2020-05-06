@@ -19,7 +19,7 @@ struct gaussian {
     gaussian(int s, float sigma) { sz = s; deno = 2 * sigma * sigma; }
 
     __host__ __device__ 
-    bool operator() (int x) {
+    float operator() (int x) {
         int y_idx = x / sz;
         int x_idx = x % sz;
         return 1.0/( exp( ( (y_idx-sz/2) * (y_idx-sz/2) + (x_idx-sz/2)*(x_idx-sz/2) )/deno ) * (deno * M_PI) );
@@ -28,14 +28,14 @@ struct gaussian {
 
 struct fctr {
     __host__ __device__
-    bool operator() (float x, float sum) {
+    float operator() (float x, float sum) {
         return x/sum;
     }
 };
 
 struct magn_grad {
     __host__ __device__
-    bool operator() (float x, float y) {
+    Tuple2 operator() (float x, float y) {
         float angle = (x == 0) * 90.0 + (x != 0) * (atan2(y, x) * 180.0/M_PI);
         return Tuple2(sqrt(x*x + y*y), angle);
     }
@@ -43,8 +43,8 @@ struct magn_grad {
 
 int main(int argc, char* argv[]) {
 	
-  	int bdx = atoi(argv[1]);
-  	int bdy = atoi(argv[2]);
+  	int bdx = atoi(argv[2]);
+  	int bdy = atoi(argv[3]);
   	
   	cudaError_t err;
 
@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
   	cudaEventCreate(&stop);
 
   	Mat image, norm_image;
-    image = imread("license.jpg", 0); 	
+    image = imread(argv[1], 0); 	
     if(image.empty())                   
     {
         cout <<  "Could not open or find the image" << endl;
@@ -188,7 +188,7 @@ int main(int argc, char* argv[]) {
 
 	Mat write_out;
 	normalize(norm_out, write_out, 0, 255, NORM_MINMAX, CV_8U);
-	imwrite("canny1_thrust.png", write_out);
+	  imwrite(argv[4], write_out);
 
 	err = cudaFree(dimg);
   	err = cudaFree(filter);

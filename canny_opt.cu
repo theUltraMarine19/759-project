@@ -12,9 +12,9 @@ using namespace std;
 
 int main(int argc, char* argv[]) {
 	
-  	int bdx = atoi(argv[1]);
-  	int bdy = atoi(argv[2]);
-    int t = atoi(argv[3]);
+  	int bdx = atoi(argv[2]);
+  	int bdy = atoi(argv[3]);
+    int t = atoi(argv[4]);
   	
   	cudaError_t err;
 
@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
     omp_set_num_threads(t);
 
   	Mat image, norm_image;
-    image = imread("license.jpg", 0); 	
+    image = imread(argv[1], 0); 	
     if(image.empty())                   
     {
         cout <<  "Could not open or find the image" << endl;
@@ -169,7 +169,7 @@ int main(int argc, char* argv[]) {
 
 	Mat write_out;
 	normalize(norm_out, write_out, 0, 255, NORM_MINMAX, CV_8U);
-	imwrite("canny1_opt.png", write_out);
+	  imwrite(argv[5], write_out);
 
 	err = cudaFree(dimg);
   	err = cudaFree(filter);

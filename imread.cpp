@@ -15,7 +15,7 @@ using namespace std;
 int main( int argc, char** argv )
 {
     Mat image, norm_image;
-    image = imread("license.jpg", 0); 	// Read the file
+    image = imread(argv[1], 0); 	// Read the file
     if(image.empty())                      		// Check for invalid input
     {
         cout <<  "Could not open or find the image" << std::endl ;
@@ -74,7 +74,7 @@ int main( int argc, char** argv )
   	
   	start = chrono::high_resolution_clock::now();
 
-    #pragma omp parallel num_threads(atoi(argv[1]))
+    #pragma omp parallel num_threads(atoi(argv[2]))
     {
   	    // for (int i = 0; i < 10; i++) {
 
@@ -153,7 +153,7 @@ int main( int argc, char** argv )
 
     Mat write_out;
     normalize(norm_out, write_out, 0, 255, NORM_MINMAX, CV_8U);
-    imwrite("sobel1.png", write_out);  
+    imwrite(argv[3], write_out);
 
     delete[] outputx;
     delete[] outputy;

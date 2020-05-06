@@ -9,15 +9,15 @@ using namespace std;
 
 struct fctr {
 	__host__ __device__
-	bool operator() (float x, float y) {
+	float operator() (float x, float y) {
 		return sqrt(x*x + y*y);
 	}
 };
 
 int main(int argc, char* argv[]) {
 	
-	int bdx = atoi(argv[1]);
-	int bdy = atoi(argv[2]);
+	int bdx = atoi(argv[2]);
+	int bdy = atoi(argv[3]);
 	
 	cudaError_t err;
 
@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
 	cudaEventCreate(&stop);
 
 	Mat image, norm_image;
-    image = imread("license.jpg", 0); 	// Read the file
+    image = imread(argv[1], 0); 	// Read the file
     if(image.empty())                      		// Check for invalid input
     {
         cout <<  "Could not open or find the image" << std::endl ;
@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) {
 
   	Mat write_out;
     normalize(norm_out, write_out, 0, 255, NORM_MINMAX, CV_8U);
-    imwrite("sobel1_thrust.png", write_out);
+    imwrite(argv[4], write_out);
 
   	err = cudaFree(dimg);
   	err = cudaFree(outx);
