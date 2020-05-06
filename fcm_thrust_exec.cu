@@ -129,7 +129,7 @@ int main(int argc, char* argv[]) {
     
 
     cout << "Saving values..." << endl;
-    ofstream myfile ("thrust.txt");
+    ofstream myfile ("output.txt");
     if (myfile.is_open()) {
         for (int i = 0; i < rows; ++i) {
             for (int j = 0; j < cols; ++j) {
