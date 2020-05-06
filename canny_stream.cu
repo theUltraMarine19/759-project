@@ -127,6 +127,8 @@ int main(int argc, char* argv[]) {
   	conv_kernel_vert<<<grid, block, sizeof(float) * (bdy+2) * bdx + 3 * sizeof(float) + sizeof(float) * bdx * bdy, stream0>>>(temp1, dmaskx1, douty, image.rows, image.cols);
   	err = cudaMemcpyAsync(houtx, doutx, image.rows * image.cols * sizeof(float), cudaMemcpyDeviceToHost, stream1);
 
+    err = cudaDeviceSynchronize();
+
   	mag_grad<<<grid, block, 0, stream0>>>(doutx, douty, doutput, dgrad, image.rows, image.cols);
     err = cudaMemcpyAsync(houty, douty, image.rows * image.cols * sizeof(float), cudaMemcpyDeviceToHost, stream1);
   	
