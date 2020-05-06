@@ -185,13 +185,13 @@ float FCM::calculate_new_old_u_dist() {
 }
 
 void FCM::print_mebership() {
-    cout << "Membership: " << endl;
+    // cout << "Membership: " << endl;
     for (int i = 0; i < i_rows; ++i) {
         for (int j = 0; j < i_cols; ++j) {
             float tmp_max = -999;
-            cout << "[";
+            // cout << "[";
             for (int k = 0; k < i_num_clutsers; ++k) {
-                cout << i_membership[i][j][k] << " ";
+                // cout << i_membership[i][j][k] << " ";
                 if (i_membership[i][j][k] >= tmp_max) {
                     // cout << "hi" << endl;
                     tmp_max = i_membership[i][j][k];
@@ -200,10 +200,10 @@ void FCM::print_mebership() {
                 }
                 // cout << i_membership[i][j][k] << " ";
             }
-            cout << "]";
+            // cout << "]";
             // cout << endl;
         }
-        cout << endl;
+        // cout << endl;
     }
 }
 

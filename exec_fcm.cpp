@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
+#include <stdlib.h>
+#include <random>
+#include <chrono>
+#include <ratio>
+#include <cmath>
 #include "/srv/home/bchang/installation/OpenCV-3.4.4/include/opencv2/core/core.hpp"
 #include "/srv/home/bchang/installation/OpenCV-3.4.4/include/opencv2/imgcodecs.hpp"
 // #include <opencv2/opencv.hpp>
@@ -11,6 +16,8 @@
 
 using namespace cv;
 using namespace std;
+using std::chrono::high_resolution_clock;
+using std::chrono::duration;
 
 int main(int argc, char** argv)
 {
@@ -38,7 +45,7 @@ int main(int argc, char** argv)
     // std::cout << "222111?" << endl;
     
     int rows = image.rows, cols = image.cols;
-    int num_clusters = 6, m = 2, epochs = 50;
+    int num_clusters = 7, m = 2, epochs = 100;
     float epsilon = 0.05, mem_diff = 0;
     int **final_membership = new int* [rows];
     for (int i = 0; i < rows; ++i) {
@@ -66,28 +73,28 @@ int main(int argc, char** argv)
     //     cout <<endl;
     // }
 
-    std::cout << "333?" << endl;
+    // std::cout << "333?" << endl;
     FCM fcm(img, epsilon, rows, cols, num_clusters, m, final_membership);
-    std::cout << "444?" << endl;
+    // std::cout << "444?" << endl;
 
+    high_resolution_clock::time_point start;
+    high_resolution_clock::time_point end;
+    duration<double, std::milli> duration_sec;
+
+    start = high_resolution_clock::now();
     fcm.init_membership();
     fcm.init_centers();
-    std::cout << "555?" << endl;
-
-    // mem_diff = fcm.update_membership();
-    // fcm.update_centers();
-    // mem_diff = fcm.update_membership();
-    // fcm.update_centers();
-
     // run for 100 epochs
     for (int i = 0; i < epochs; ++i) {
         // std::cout << "666?" << endl;
         mem_diff = fcm.update_membership();
         fcm.update_centers();
     }
+    end = high_resolution_clock::now();
+    
 
 
-    std::cout << "400 Iterations done" << endl;
+    std::cout << "100 Iterations done" << endl;
 
 
     // repaint image with corresponding cluster (255 / num_clusters)
@@ -99,6 +106,12 @@ int main(int argc, char** argv)
     //     }
     //     // cout << "Yeehaw" << endl;
     // }
+    // Convert the calculated duration to a double using the standard library
+    duration_sec = std::chrono::duration_cast<duration<double, std::milli>>(end - start);
+    
+    // Durations are converted to milliseconds already thanks to std::chrono::duration_cast
+    cout << duration_sec.count()<<endl;
+
 
 
     std::cout << "Saving values..." << endl;
